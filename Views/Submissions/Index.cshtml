@@ -1,0 +1,13 @@
+@model IEnumerable<CourseManagement.Models.Submission>
+
+@{
+    ViewData["Title"] = "Danh sách nộp bài";
+}
+
+<h1>Danh sách nộp bài</h1>
+<ul>
+@foreach(var s in Model)
+{
+    <li>@s.StudentId - @s.SubmittedAt.ToString("g") - @if(!string.IsNullOrEmpty(s.FilePath)){ <a href="/@s.FilePath">Tải</a> }</li>
+}
+</ul>

@@ -1,0 +1,16 @@
+@{
+    ViewData["Title"] = "Nộp bài";
+}
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="assignmentId" value="@ViewBag.AssignmentId" />
+    <div>
+        <label>File nộp</label>
+        <input type="file" name="file" />
+    </div>
+    <div>
+        <label>Ghi chú</label>
+        <textarea name="comments"></textarea>
+    </div>
+    <button type="submit">Nộp bài</button>
+</form>

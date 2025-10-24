@@ -1,0 +1,17 @@
+@model IEnumerable<CourseManagement.Models.Assignment
+>
+
+@{
+    ViewData["Title"] = "Bài tập";
+    var classId = ViewBag.ClassId as int? ?? 0;
+}
+
+<h1>Bài tập</h1>
+<p><a asp-action="Create" asp-route-classId="@classId" class="btn btn-primary">Tạo bài tập mới</a></p>
+<ul>
+    @foreach (var a in Model)
+    {
+        <li><a asp-action="Details" asp-route-id="@a.Id">@a.Title</a> - <span
+                class="text-muted">@a.CreatedAt.ToString("g")</span></li>
+    }
+</ul>

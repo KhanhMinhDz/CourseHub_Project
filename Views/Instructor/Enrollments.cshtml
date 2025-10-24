@@ -1,0 +1,9 @@
+@model IEnumerable<CourseManagement.Models.EnrollmentViewModel>
+
+<h1>Danh sách sinh viên ghi danh</h1>
+<ul>
+    @foreach (var e in Model)
+    {
+        <li>@(e.StudentName ?? e.StudentId) - @e.EnrolledAt.ToString("g")</li>
+    }
+</ul>

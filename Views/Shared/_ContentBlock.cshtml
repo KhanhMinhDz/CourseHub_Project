@@ -1,0 +1,10 @@
+@model CourseManagement.Models.ContentBlock
+
+<div class="content-block mb-3" data-block-id="@Model.Id">
+    <div class="content-display p-3 border rounded" data-editable="true">
+        @Html.Raw(Model.Content)
+    </div>
+    <div class="text-end mt-1" style="display:none;" data-controls="true">
+        <button class="btn btn-sm btn-danger" data-action="delete" data-id="@Model.Id">Xóa</button>
+    </div>
+</div>

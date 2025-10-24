@@ -1,0 +1,32 @@
+@model CourseManagement.Models.ClassRoom
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<h1>@Model.Title</h1>
+<p>@Model.Description</p>
+
+@if (TempData["EnrollError"] != null)
+{
+    <div class="alert alert-danger">@TempData["EnrollError"]</div>
+}
+@if (TempData["EnrollSuccess"] != null)
+{
+    <div class="alert alert-success">@TempData["EnrollSuccess"]</div>
+}
+
+@if (User?.Identity?.IsAuthenticated ?? false)
+{
+    <form asp-controller="Enrollments" asp-action="Enroll" method="post" class="row g-2">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="classId" value="@Model.Id" />
+        <div class="col-md-6">
+            <label class="form-label">Mật khẩu ghi danh (nếu có)</label>
+            <input type="text" name="password" class="form-control" />
+        </div>
+        <div class="col-md-6 align-self-end">
+            <button type="submit" class="btn btn-primary">Ghi danh</button>
+        </div>
+    </form>
+}

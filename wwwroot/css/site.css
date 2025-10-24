@@ -1,0 +1,123 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--primary-color);
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+:root {
+  --primary-color: #0b63d8;
+  /* Ucademy-like blue */
+  --accent-color: #ffd966;
+  /* warm yellow */
+  --muted: #6c757d;
+  --bg: #ffffff;
+}
+
+/* Navbar */
+.navbar {
+  background: linear-gradient(90deg, rgba(11, 99, 216, 1) 0%, rgba(10, 80, 190, 1) 100%);
+}
+
+.navbar .navbar-brand,
+.navbar .nav-link {
+  color: white !important;
+}
+
+/* Primary buttons */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #0953b8;
+  border-color: #0953b8;
+}
+
+/* Accent highlights */
+.highlight-accent {
+  background-color: var(--accent-color);
+  color: #222;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.container main h1 {
+  color: var(--primary-color);
+}
+
+/* Logo in navbar */
+.navbar-brand img {
+  height: 36px;
+}
+
+/* Footer */
+.footer {
+  background: #f8f9fa;
+  padding: 1rem 0;
+  color: var(--muted);
+}
+
+.footer a {
+  color: var(--primary-color);
+}
+
+.footer a:hover {
+  color: #083c88;
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: #083c88;
+  text-decoration: underline;
+}
+
+/* Forms */
+.form-control {
+  border-radius: 6px;
+  border-color: #e3e6ea;
+}
+
+/* Cards (used for class/assignment lists) */
+.card-custom {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9eef8;
+}
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+  .navbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .navbar-brand img {
+    height: 32px;
+  }
+}

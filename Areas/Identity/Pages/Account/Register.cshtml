@@ -1,0 +1,36 @@
+@page
+@model CourseManagement.Areas.Identity.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+<h1>Đăng ký</h1>
+<form method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label">Email</label>
+        <input asp-for="Input.Email" class="form-control" placeholder="your@school.edu" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Input.FullName" class="form-label">Họ và tên</label>
+        <input asp-for="Input.FullName" class="form-control" placeholder="Nguyễn Văn A" />
+        <span asp-validation-for="Input.FullName" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Input.Password" class="form-label">Mật khẩu</label>
+        <input asp-for="Input.Password" type="password" class="form-control" placeholder="Mật khẩu (ít nhất 6 ký tự)" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Input.ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
+        <input asp-for="Input.ConfirmPassword" type="password" class="form-control" placeholder="Nhập lại mật khẩu" />
+        <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Đăng ký</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

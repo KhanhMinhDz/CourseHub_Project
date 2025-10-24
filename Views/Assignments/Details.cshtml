@@ -1,0 +1,85 @@
+@model CourseManagement.Models.Assignment
+
+@{
+    ViewData["Title"] = Model.Title;
+    var cls = ViewBag.Class as CourseManagement.Models.ClassRoom;
+}
+
+<h1>@Model.Title</h1>
+<p class="text-muted">Lớp: @cls?.Title</p>
+
+<ul class="nav nav-tabs" id="assignmentTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button"
+            role="tab">Chỉnh sửa</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="subs-tab" data-bs-toggle="tab" data-bs-target="#subs" type="button" role="tab">Nộp
+            bài</button>
+    </li>
+</ul>
+<div class="tab-content p-3 border border-top-0">
+    <div class="tab-pane fade show active" id="edit" role="tabpanel">
+        @{
+            // Determine whether current user can edit: instructor or admin
+            var canEdit = User.IsInRole("Admin") || (ViewBag.Class != null && ViewBag.Class.InstructorId ==
+            User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        }
+        @if (!canEdit)
+        {
+            <div class="alert alert-info">Bạn không có quyền chỉnh sửa bài tập này.</div>
+        }
+        else
+        {
+            <form asp-action="EditDescription" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="mb-3">
+                    <label class="form-label">Tiêu đề</label>
+                    <input name="title" class="form-control" value="@Model.Title" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nội dung / Đề bài</label>
+                    <textarea name="description" class="form-control" rows="8">@Model.Description</textarea>
+                </div>
+                <button class="btn btn-primary" type="submit">Lưu</button>
+            </form>
+        }
+    </div>
+    <div class="tab-pane fade" id="subs" role="tabpanel">
+        <h4>Danh sách sinh viên và trạng thái nộp</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Trạng thái</th>
+                    <th>Tệp nộp</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var enrollments = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
+                    as CourseManagement.Data.ApplicationDbContext;
+                    var userMgr =
+                    Context.RequestServices.GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>))
+                    as Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>;
+                    var list = enrollments?.Enrollments.Where(e => e.ClassRoomId == Model.ClassRoomId).ToList() ?? new
+                    List<CourseManagement.Models.Enrollment>();
+                    foreach (var e in list)
+                    {
+                        var user = userMgr?.FindByIdAsync(e.StudentId).GetAwaiter().GetResult();
+                        var sub = enrollments?.Submissions.FirstOrDefault(s => s.AssignmentId == Model.Id && s.StudentId ==
+                        e.StudentId);
+                        var submitted = sub != null;
+                        <tr class="@(submitted ? "table-success" : "table-danger")">
+                            <td>@(user?.FullName ?? user?.UserName)</td>
+                            <td>@(submitted ? "Đã nộp" : "Chưa nộp")</td>
+                            <td>@(submitted && sub?.FilePath != null ? Html.Raw($"<a href='/{sub.FilePath}'>Tải</a>") : "-")
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

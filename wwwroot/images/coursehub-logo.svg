@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="36" viewBox="0 0 120 36" role="img" aria-label="CourseHub logo">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0%" stop-color="#0b63d8" />
+      <stop offset="100%" stop-color="#0953b8" />
+    </linearGradient>
+  </defs>
+  <rect width="36" height="36" rx="6" fill="url(#g)" />
+  <g transform="translate(8,6)" fill="#fff" font-family="Segoe UI, Roboto, Arial, sans-serif" font-size="14">
+    <text x="34" y="16" font-weight="700">Course</text>
+    <text x="34" y="32" font-weight="400" font-size="12" fill="#ffd966">Hub</text>
+  </g>
+</svg>

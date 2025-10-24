@@ -1,0 +1,17 @@
+@model IEnumerable<CourseManagement.Models.ClassRoom>
+
+@{
+    ViewData["Title"] = "Danh sách lớp học";
+}
+
+<h1>Danh sách lớp học</h1>
+
+<ul>
+@foreach(var c in Model)
+{
+    <li>
+        <a asp-controller="ClassRooms" asp-action="Details" asp-route-id="@c.Id">@c.Title</a>
+        @if(!string.IsNullOrEmpty(c.Description)) { <div>@c.Description</div> }
+    </li>
+}
+</ul>
