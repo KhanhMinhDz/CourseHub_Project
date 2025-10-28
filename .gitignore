@@ -12,10 +12,24 @@
 # VS Code
 .vscode/
 
-# Others
-*.cache
-*.pdb
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.nuspec
+
+# Logs
+*.log
+[Ll]ogs/
+
+# Temporary files
 *.tmp
 *.temp
+*.cache
 *.dbmdl
-*.log
+*.pdb
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
