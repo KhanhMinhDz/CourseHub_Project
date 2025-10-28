@@ -1,23 +1,38 @@
 # Build results
 [Bb]in/
 [Oo]bj/
+<<<<<<< HEAD
 
 # Visual Studio
+=======
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+>>>>>>> main
 .vs/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 
+<<<<<<< HEAD
 # VS Code
 .vscode/
 
 # NuGet
+=======
+# Visual Studio Code
+.vscode/
+
+# NuGet packages
+>>>>>>> main
 *.nupkg
 *.snupkg
 packages/
 *.nuspec
 
+<<<<<<< HEAD
 # Logs
 *.log
 [Ll]ogs/
@@ -33,3 +48,47 @@ packages/
 .idea/
 _ReSharper*/
 *.DotSettings.user
+=======
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Build folders
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# Publish output
+publish/
+AppPackages/
+app.publish/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.VisualState.xml
+*.TestResult.xml
+
+# Auto-generated files
+*.tmp
+*.temp
+*.bak
+*.obj
+*.pdb
+
+# Rider / JetBrains
+.idea/
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Others
+*.cache
+*.dbmdl
+*.jfm
+>>>>>>> main
