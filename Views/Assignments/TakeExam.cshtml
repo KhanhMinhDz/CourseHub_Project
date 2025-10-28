@@ -1,0 +1,50 @@
+﻿@model CourseManagement.Models.Assignment
+@{
+    var questions = ViewBag.Questions as List<CourseManagement.Models.Question> ?? new List<CourseManagement.Models.Question>();
+    ViewData["Title"] = "Làm bài - " + Model.Title;
+}
+
+<h2>@Model.Title</h2>
+
+<form method="post" asp-action="SubmitExam" asp-controller="Assignments">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="assignmentId" value="@Model.Id" />
+
+    @foreach (var q in questions)
+    {
+        <div class="card mb-3 p-3">
+            <div><strong>Q@q.Id:</strong> @q.Content</div>
+
+            <div class="mt-2">
+                @{
+                    var opts = q.Options;
+                    for (int i = 0; i < opts.Count; i++)
+                    {
+                        var inputName = "answer_" + q.Id;
+                        var value = i.ToString(); 
+                        if (q.AllowMultiple)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="@inputName" id="@($"{inputName}_{i}")" value="@value" />
+                                <label class="form-check-label" for="@($"{inputName}_{i}")">
+                                    @((char)('A' + i)).) @opts[i]
+                                </label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="@inputName" id="@($"{inputName}_{i}")" value="@value" />
+                                <label class="form-check-label" for="@($"{inputName}_{i}")">
+                                    @((char)('A' + i)).) @opts[i]
+                                </label>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    <button class="btn btn-primary" type="submit">Nộp bài</button>
+</form>

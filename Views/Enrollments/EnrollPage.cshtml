@@ -1,0 +1,19 @@
+﻿@{
+    ViewBag.Title = "Ghi danh vào lớp";
+}
+
+<h2>Ghi danh vào lớp: @ViewBag.ClassName</h2>
+
+@if (TempData["EnrollError"] != null)
+{
+    <div class="alert alert-danger">@TempData["EnrollError"]</div>
+}
+
+<form asp-action="Enroll" method="post">
+    <input type="hidden" name="classId" value="@ViewBag.ClassId" />
+    <div class="form-group mb-3">
+        <label>Mã ghi danh:</label>
+        <input type="password" name="password" class="form-control" required />
+    </div>
+    <button type="submit" class="btn btn-primary">Ghi danh</button>
+</form>

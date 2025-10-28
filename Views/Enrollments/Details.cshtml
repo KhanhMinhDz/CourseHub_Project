@@ -1,0 +1,22 @@
+﻿@{
+    bool isEnrolled = ViewBag.IsEnrolled ?? false;
+}
+
+@if (!isEnrolled)
+{
+    <form asp-action="Enroll" asp-controller="Enrollments" method="post">
+        <input type="hidden" name="classId" value="@Model.Id" />
+        <div class="mb-3">
+            <label for="password">Mã ghi danh:</label>
+            <input type="password" name="password" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-primary">Ghi danh</button>
+    </form>
+}
+else
+{
+    <div class="alert alert-success">
+        ✅ Bạn đã ghi danh vào lớp học này.
+        <a href="@Url.Action("Details", "ClassRooms", new { id = Model.Id })" class="btn btn-sm btn-success">Vào lớp</a>
+    </div>
+}

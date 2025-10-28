@@ -25,10 +25,29 @@ namespace CourseManagement.Controllers
         // GET: /ClassRooms/Details/5
         public async Task<IActionResult> Details(int id)
         {
-            var c = await _context.ClassRooms.FindAsync(id);
+            var c = await _context.ClassRooms
+                .Include(x => x.ContentBlocks)
+                .Include(x => x.Assignments)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             if (c == null) return NotFound();
+
+            var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            ViewBag.IsInstructor = (userId != null && userId == c.InstructorId);
+
+            if (userId != null)
+            {
+                ViewBag.IsEnrolled = await _context.Enrollments
+                    .AnyAsync(e => e.ClassRoomId == id && e.StudentId == userId);
+            }
+            else
+            {
+                ViewBag.IsEnrolled = false;
+            }
+
             return View(c);
         }
+
 
         // Admin creates class
         [Authorize(Roles = "Admin")]

@@ -16,5 +16,7 @@ namespace CourseManagement.Models
 
         // FK to instructor (ApplicationUser.Id)
         public string? InstructorId { get; set; }
+        public virtual ICollection<Assignment>? Assignments { get; set; }
+        public virtual ICollection<ContentBlock>? ContentBlocks { get; set; }
     }
 }

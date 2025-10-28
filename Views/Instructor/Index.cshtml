@@ -1,12 +1,17 @@
 @model IEnumerable<CourseManagement.Models.ClassRoom>
 
 <h1>Dashboard giảng viên</h1>
+
+<p><a class="btn btn-success" asp-action="Create">+ Tạo lớp mới</a></p>
+
 <ul>
     @foreach (var c in Model)
     {
         <li>
-            <strong>@c.Title</strong> - <a asp-action="Edit" asp-route-id="@c.Id">Chỉnh sửa</a> - <a asp-action="Enrollments" asp-route-id="@c.Id">Danh sách sinh viên</a>
-            - <a asp-controller="Assignments" asp-action="Index" asp-route-classId="@c.Id">Bài tập</a>
+            <strong>@c.Title</strong> -
+            <a asp-action="Edit" asp-route-id="@c.Id">Chỉnh sửa</a> -
+            <a asp-action="Enrollments" asp-route-id="@c.Id">Danh sách sinh viên</a> -
+            <a asp-controller="Assignments" asp-action="Index" asp-route-classId="@c.Id">Bài tập</a>
         </li>
     }
 </ul>

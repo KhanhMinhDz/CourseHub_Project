@@ -1,32 +1,36 @@
-@model CourseManagement.Models.ClassRoom
-
 @{
-    ViewData["Title"] = Model.Title;
+    var isEnrolled = ViewBag.IsEnrolled ?? false;
+    var isInstructor = ViewBag.IsInstructor ?? false;
 }
 
-<h1>@Model.Title</h1>
-<p>@Model.Description</p>
-
-@if (TempData["EnrollError"] != null)
+@if (!isEnrolled && !isInstructor)
 {
-    <div class="alert alert-danger">@TempData["EnrollError"]</div>
-}
-@if (TempData["EnrollSuccess"] != null)
-{
-    <div class="alert alert-success">@TempData["EnrollSuccess"]</div>
-}
-
-@if (User?.Identity?.IsAuthenticated ?? false)
-{
-    <form asp-controller="Enrollments" asp-action="Enroll" method="post" class="row g-2">
-        @Html.AntiForgeryToken()
+    <form asp-controller="Enrollments" asp-action="Enroll" method="post">
         <input type="hidden" name="classId" value="@Model.Id" />
-        <div class="col-md-6">
-            <label class="form-label">Mật khẩu ghi danh (nếu có)</label>
-            <input type="text" name="password" class="form-control" />
+        <div class="mb-3">
+            <input type="password" name="password" placeholder="Mật khẩu ghi danh (nếu có)" class="form-control" />
         </div>
-        <div class="col-md-6 align-self-end">
-            <button type="submit" class="btn btn-primary">Ghi danh</button>
-        </div>
+        <button type="submit" class="btn btn-primary">Ghi danh</button>
     </form>
+}
+else
+{
+    <div>
+        <h4>Nội dung khóa học:</h4>
+        @foreach (var block in ((IEnumerable<CourseManagement.Models.ContentBlock>)Model.ContentBlocks).OrderBy(cb => cb.Order))
+        {
+            <div class="mb-3 p-2 border rounded">
+                @Html.Raw(block.Content)
+            </div>
+        }
+
+        @foreach (var a in Model.Assignments)
+        {
+            <div class="mb-3 p-3 border bg-light">
+                <h5>@a.Title</h5>
+                <p>@a.Description</p>
+                <a class="btn btn-sm btn-primary" href="@Url.Action("Take", "Assignments", new { id = a.Id })">Làm bài</a>
+            </div>
+        }
+    </div>
 }

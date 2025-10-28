@@ -1,8 +1,9 @@
-using CourseManagement.Data;
+﻿using CourseManagement.Data;
 using CourseManagement.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace CourseManagement.Controllers
 {
@@ -111,5 +112,200 @@ namespace CourseManagement.Controllers
 
             return RedirectToAction("Index", new { classId });
         }
+        [HttpPost]
+        [Authorize(Roles = "Instructor")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadQuestions(int assignmentId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Vui lòng chọn file CSV hoặc Excel hợp lệ.";
+                return RedirectToAction(nameof(Details), new { id = assignmentId });
+            }
+
+            var assignment = await _context.Assignments.FindAsync(assignmentId);
+            if (assignment == null) return NotFound();
+
+            var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var cls = await _context.ClassRooms.FindAsync(assignment.ClassRoomId);
+            var isAdmin = User?.IsInRole("Admin") ?? false;
+            if (cls != null && cls.InstructorId != null && cls.InstructorId != userId && !isAdmin)
+                return Forbid();
+
+            var questions = new List<Question>();
+
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                if (file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var reader = new StreamReader(stream);
+                    string? line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        var parts = line.Split(',').Select(p => p.Trim()).ToList();
+                        if (parts.Count < 3) continue; 
+
+                        string content = parts[0];
+                        string correct = parts[^2];
+                        bool multiple = bool.TryParse(parts[^1], out bool m) && m;
+
+                        var answers = parts.Skip(1).Take(parts.Count - 2).ToList();
+
+                        questions.Add(new Question
+                        {
+                            AssignmentId = assignmentId,
+                            Content = content,
+                            Options = answers,
+                            CorrectAnswers = correct,
+                            AllowMultiple = multiple
+                        });
+                    }
+                }
+                else if (file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var package = new OfficeOpenXml.ExcelPackage(stream);
+                    var ws = package.Workbook.Worksheets.First();
+                    int rowCount = ws.Dimension.Rows;
+
+                    for (int row = 2; row <= rowCount; row++) 
+                    {
+                        var rowValues = new List<string>();
+                        for (int col = 1; col <= ws.Dimension.Columns; col++)
+                            rowValues.Add(ws.Cells[row, col].Text.Trim());
+
+                        if (rowValues.Count < 3) continue;
+
+                        string content = rowValues[0];
+                        string correct = rowValues[^2];
+                        bool multiple = bool.TryParse(rowValues[^1], out bool m) && m;
+                        var answers = rowValues.Skip(1).Take(rowValues.Count - 2).ToList();
+
+                        questions.Add(new Question
+                        {
+                            AssignmentId = assignmentId,
+                            Content = content,
+                            Options = answers,
+                            CorrectAnswers = correct,
+                            AllowMultiple = multiple
+                        });
+                    }
+                }
+                else
+                {
+                    TempData["Error"] = "Định dạng file không hợp lệ (chỉ chấp nhận CSV hoặc XLSX).";
+                    return RedirectToAction(nameof(Details), new { id = assignmentId });
+                }
+            }
+
+            _context.Questions.AddRange(questions);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = $"Đã thêm {questions.Count} câu hỏi từ file {file.FileName}.";
+            return RedirectToAction(nameof(Details), new { id = assignmentId });
+        }
+        public async Task<IActionResult> TakeExam(int id)
+        {
+            var assignment = await _context.Assignments.FindAsync(id);
+            if (assignment == null) return NotFound();
+
+            var questions = await _context.Questions
+            .Where(q => q.AssignmentId == id)
+            .OrderBy(q => q.Id) 
+            .ToListAsync();
+
+
+            ViewBag.Questions = questions;
+            return View(assignment);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitExam(int assignmentId, IFormCollection form)
+        {
+            var questions = await _context.Questions
+                .Where(q => q.AssignmentId == assignmentId)
+                .ToListAsync();
+
+            if (questions.Count == 0)
+            {
+                ViewBag.Score = 0;
+                ViewBag.Total = 10;
+                ViewBag.AssignmentId = assignmentId;
+                return View("ExamResult");
+            }
+
+            double totalScore = 10.0;
+            double pointsPerQuestion = totalScore / questions.Count;
+            double gainedScore = 0.0;
+
+            string[] NormalizeCorrectAnswers(Question q)
+            {
+                if (string.IsNullOrWhiteSpace(q.CorrectAnswers)) return Array.Empty<string>();
+
+                var parts = q.CorrectAnswers.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(p => p.Trim()).ToArray();
+
+                if (parts.All(p => p.All(char.IsDigit)))
+                    return parts;
+
+                var letters = parts.Select(p => p.Trim().ToUpper()).ToArray();
+                var list = new List<string>();
+                var options = JsonConvert.DeserializeObject<List<string>>(q.OptionsJson ?? "[]");
+                for (int i = 0; i < options.Count; i++)
+                {
+                    string letter = ((char)('A' + i)).ToString();
+                    if (letters.Contains(letter)) list.Add(i.ToString());
+                }
+                return list.ToArray();
+            }
+
+            foreach (var q in questions)
+            {
+                var options = JsonConvert.DeserializeObject<List<string>>(q.OptionsJson ?? "[]");
+
+                var fieldName = $"answer_{q.Id}";
+                var values = form[fieldName];
+                var selected = values.ToArray();
+
+                var correctSet = new HashSet<string>(NormalizeCorrectAnswers(q));
+                var selectedSet = new HashSet<string>();
+
+                foreach (var s in selected)
+                {
+                    if (string.IsNullOrWhiteSpace(s)) continue;
+                    var t = s.Trim();
+                    if (t.All(char.IsDigit))
+                    {
+                        selectedSet.Add(t);
+                    }
+                    else
+                    {
+                        var up = t.ToUpper();
+                        int idx = up[0] - 'A';
+                        if (idx >= 0 && idx < options.Count) selectedSet.Add(idx.ToString());
+                    }
+                }
+
+                bool correct = false;
+                if (q.AllowMultiple)
+                    correct = selectedSet.SetEquals(correctSet);
+                else if (selectedSet.Count > 0)
+                    correct = correctSet.Overlaps(selectedSet);
+
+                if (correct)
+                    gainedScore += pointsPerQuestion;
+            }
+
+            gainedScore = Math.Round(gainedScore, 2);
+
+            ViewBag.Score = gainedScore;
+            ViewBag.Total = totalScore;
+            ViewBag.AssignmentId = assignmentId;
+
+            return View("ExamResult");
+        }
+
     }
 }

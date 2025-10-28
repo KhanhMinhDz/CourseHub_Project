@@ -80,5 +80,28 @@ namespace CourseManagement.Controllers
             }
             return View(vm);
         }
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ClassRoom model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var userId = _userManager.GetUserId(User);
+
+            model.InstructorId = userId;
+
+            _context.ClassRooms.Add(model);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
     }
 }
