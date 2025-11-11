@@ -65,12 +65,76 @@
     @* Hiển thị form nếu chưa quá hạn HOẶC chưa có deadline *@
     @if (!isPastDeadline && !hasSubmitted)
     {
-        <form method="post" asp-action="SubmitExam" asp-controller="Assignments" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="assignmentId" value="@Model.Id" />
+        @* Kiểm tra nếu có câu hỏi thì dùng SubmitQuiz, không có thì dùng SubmitExam *@
+        @if (questions.Any())
+        {
+            <form method="post" asp-action="SubmitQuiz" asp-controller="Assignments">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="assignmentId" value="@Model.Id" />
 
-            @if (!questions.Any())
-            {
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Tổng số câu hỏi:</strong> @questions.Count câu
+                </div>
+
+                @for (int idx = 0; idx < questions.Count; idx++)
+                {
+                    var q = questions[idx];
+                    var questionNumber = idx + 1;
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong>Câu @questionNumber:</strong> @q.Content
+                        </div>
+                        <div class="card-body">
+                            @{
+                                var opts = q.Options;
+                                for (int i = 0; i < opts.Count; i++)
+                                {
+                                    var inputName = "answer_" + q.Id;
+                                    var optionLabel = ((char)('A' + i)).ToString();
+                                    var optionValue = opts[i]; // Gửi giá trị đáp án thực tế, không phải chỉ số
+
+                                    if (q.AllowMultiple)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="@inputName" id="@($"{inputName}_{i}")"
+                                                value="@optionValue" />
+                                            <label class="form-check-label" for="@($"{inputName}_{i}")">
+                                                @optionLabel.) @opts[i]
+                                            </label>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="@inputName" id="@($"{inputName}_{i}")"
+                                                value="@optionValue" />
+                                            <label class="form-check-label" for="@($"{inputName}_{i}")">
+                                                @optionLabel.) @opts[i]
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-primary btn-lg" type="submit">
+                        <i class="bi bi-send-fill"></i> Nộp bài
+                    </button>
+                </div>
+            </form>
+        }
+        else
+        {
+            @* Bài tập tự luận - upload file *@
+            <form method="post" asp-action="SubmitExam" asp-controller="Assignments" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="assignmentId" value="@Model.Id" />
+
                 <div class="alert alert-info">
                     <strong>Bài tập tự luận:</strong> Vui lòng tải lên file bài làm của bạn.
                 </div>
@@ -84,50 +148,14 @@
                     <textarea name="studentNote" id="studentNote" class="form-control" rows="3"
                 placeholder="Nhập ghi chú của bạn..."></textarea>
                 </div>
-            }
 
-            @foreach (var q in questions)
-            {
-                <div class="card mb-3 p-3">
-                    <div><strong>Q@q.Id:</strong> @q.Content</div>
-
-                    <div class="mt-2">
-                        @{
-                            var opts = q.Options;
-                            for (int i = 0; i < opts.Count; i++)
-                            {
-                                var inputName = "answer_" + q.Id;
-                                var value = i.ToString();
-                                if (q.AllowMultiple)
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="@inputName" id="@($"{inputName}_{i}")"
-                                            value="@value" />
-                                        <label class="form-check-label" for="@($"{inputName}_{i}")">
-                                            @((char)('A' + i)).) @opts[i]
-                                        </label>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="@inputName" id="@($"{inputName}_{i}")"
-                                            value="@value" />
-                                        <label class="form-check-label" for="@($"{inputName}_{i}")">
-                                            @((char)('A' + i)).) @opts[i]
-                                        </label>
-                                    </div>
-                                }
-                            }
-                        }
-                    </div>
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-primary btn-lg" type="submit">
+                        <i class="bi bi-send-fill"></i> Nộp bài
+                    </button>
                 </div>
-            }
-
-            <button class="btn btn-primary" type="submit">
-                <i class="bi bi-send"></i> Nộp bài
-            </button>
-        </form>
+            </form>
+        }
     }
     else if (isPastDeadline)
     {

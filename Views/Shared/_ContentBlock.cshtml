@@ -1,7 +1,8 @@
 @model CourseManagement.Models.ContentBlock
 
 <div class="content-block mb-3" data-block-id="@Model.Id">
-    <div class="content-display p-3 border rounded" data-editable="true">
+    <div class="content-display p-3 border rounded" data-editable="true"
+        style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal;">
         @Html.Raw(Model.Content)
     </div>
     <div class="text-end mt-1" style="display:none;" data-controls="true">

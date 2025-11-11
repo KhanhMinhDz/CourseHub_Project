@@ -15,5 +15,8 @@ namespace CourseManagement.Models
         public string? FilePath { get; set; }
         public string? Comments { get; set; }
         public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+
+        // Điểm số cho bài trắc nghiệm (null = bài tự luận hoặc chưa chấm)
+        public double? Score { get; set; }
     }
 }

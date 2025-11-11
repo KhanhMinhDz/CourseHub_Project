@@ -1,7 +1,8 @@
 @model CourseManagement.Models.Assignment
 
 <div class="content-block mb-3 assignment-block" data-assignment-id="@Model.Id">
-    <div class="content-display p-3 border rounded">
+    <div class="content-display p-3 border rounded"
+        style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;">
         <h5><a href="@Url.Action("Details", "Assignments", new { id = Model.Id })">@Model.Title</a></h5>
     </div>
     <div class="text-end mt-1" style="display:none;" data-controls="true">

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using System.Security.Claims;
 using System.IO.Compression;
 
 namespace CourseManagement.Controllers
@@ -345,6 +346,153 @@ namespace CourseManagement.Controllers
 
             // Sau khi xử lý, redirect về Details:
             return RedirectToAction(nameof(Details), new { id = assignmentId });
+        }
+
+        // POST: /Assignments/SubmitQuiz
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitQuiz(int assignmentId, IFormCollection form)
+        {
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var assignment = await _context.Assignments
+                .Include(a => a.ClassRoom)
+                .FirstOrDefaultAsync(a => a.Id == assignmentId);
+
+            if (assignment == null) return NotFound();
+
+            // Kiểm tra học viên đã đăng ký lớp chưa
+            var enrolled = await _context.Enrollments
+                .AnyAsync(e => e.ClassRoomId == assignment.ClassRoomId && e.StudentId == userId);
+            if (!enrolled)
+            {
+                TempData["Error"] = "Bạn chưa đăng ký lớp học này.";
+                return RedirectToAction(nameof(Details), new { id = assignmentId });
+            }
+
+            // Lấy tất cả câu hỏi
+            var questions = await _context.Questions
+                .Where(q => q.AssignmentId == assignmentId)
+                .OrderBy(q => q.Id)
+                .ToListAsync();
+
+            if (!questions.Any())
+            {
+                TempData["Error"] = "Bài tập này không có câu hỏi.";
+                return RedirectToAction(nameof(Details), new { id = assignmentId });
+            }
+
+            // Tính điểm mỗi câu: 10 / tổng số câu hỏi
+            double pointsPerQuestion = 10.0 / questions.Count;
+            int correctCount = 0;
+
+            var questionResults = new List<QuestionResult>();
+
+            foreach (var q in questions)
+            {
+                var studentAnswers = new List<string>();
+
+                // Lấy đáp án học viên đã chọn từ form
+                var answerKey = $"answer_{q.Id}";
+                if (form.ContainsKey(answerKey))
+                {
+                    studentAnswers = form[answerKey].Where(a => a != null).Select(a => a!).ToList();
+                }
+
+                // Lấy đáp án đúng
+                var correctAnswers = q.CorrectAnswers.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(a => a.Trim())
+                    .ToList();
+
+                // So sánh đáp án
+                bool isCorrect = studentAnswers.Count == correctAnswers.Count &&
+                                studentAnswers.All(a => correctAnswers.Contains(a));
+
+                if (isCorrect) correctCount++;
+
+                questionResults.Add(new QuestionResult
+                {
+                    QuestionId = q.Id,
+                    Content = q.Content,
+                    Options = q.Options,
+                    CorrectAnswers = correctAnswers,
+                    StudentAnswers = studentAnswers,
+                    IsCorrect = isCorrect,
+                    PointsPerQuestion = pointsPerQuestion
+                });
+            }
+
+            // Tính điểm tổng (làm tròn 2 chữ số)
+            double totalScore = Math.Round(correctCount * pointsPerQuestion, 2);
+
+            // Lưu submission vào database
+            var submission = new Submission
+            {
+                AssignmentId = assignmentId,
+                StudentId = userId,
+                FilePath = "", // Bài trắc nghiệm không có file
+                Comments = $"Điểm: {totalScore}/10 - Số câu đúng: {correctCount}/{questions.Count}",
+                Score = totalScore, // Lưu điểm số
+                SubmittedAt = DateTime.UtcNow
+            };
+
+            _context.Submissions.Add(submission);
+            await _context.SaveChangesAsync();
+
+            // Tạo ViewModel để hiển thị kết quả
+            var viewModel = new QuizResultViewModel
+            {
+                AssignmentId = assignmentId,
+                AssignmentTitle = assignment.Title,
+                QuestionResults = questionResults,
+                TotalQuestions = questions.Count,
+                CorrectAnswers = correctCount,
+                Score = totalScore,
+                MaxScore = 10.0
+            };
+
+            return View("QuizResult", viewModel);
+        }
+
+        // POST: /Assignments/Delete/5
+        [HttpPost]
+        [Authorize(Roles = "Instructor")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var assignment = await _context.Assignments.FindAsync(id);
+            if (assignment == null) return NotFound();
+
+            var cls = await _context.ClassRooms.FindAsync(assignment.ClassRoomId);
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User?.IsInRole("Admin") ?? false;
+            if (cls != null && cls.InstructorId != null && cls.InstructorId != userId && !isAdmin) return Forbid();
+
+            // Remove related questions
+            var questions = _context.Questions.Where(q => q.AssignmentId == id);
+            _context.Questions.RemoveRange(questions);
+
+            // Remove submissions and their files
+            var submissions = await _context.Submissions.Where(s => s.AssignmentId == id).ToListAsync();
+            foreach (var s in submissions)
+            {
+                if (!string.IsNullOrEmpty(s.FilePath))
+                {
+                    var rel = s.FilePath.TrimStart('/', '\\');
+                    var physical = Path.Combine(_env.WebRootPath ?? "wwwroot", rel);
+                    try { if (System.IO.File.Exists(physical)) System.IO.File.Delete(physical); } catch { }
+                }
+            }
+            _context.Submissions.RemoveRange(submissions);
+
+            // Finally remove assignment
+            _context.Assignments.Remove(assignment);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Xóa bài tập thành công.";
+            // Redirect back to the classroom edit page
+            return RedirectToAction("Edit", "Instructor", new { id = assignment.ClassRoomId });
         }
 
     }
