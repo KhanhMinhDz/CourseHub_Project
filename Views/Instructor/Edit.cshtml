@@ -35,17 +35,9 @@
 <!-- Text editor area (simple textarea for now) -->
 <div id="textArea" style="display:none;">
     <label class="form-label">Nội dung (Text)</label>
-    <textarea class="form-control" rows="6"></textarea>
+    <textarea id="contentEditor" class="form-control" rows="6"></textarea>
     <div class="mt-2">
-        <label class="form-label">Kích cỡ chữ</label>
-        <select class="form-select w-auto d-inline-block">
-            <option value="14">14</option>
-            <option value="16">16</option>
-            <option value="18">18</option>
-        </select>
-        <label class="form-label ms-3">Màu chữ</label>
-        <input type="color" class="form-control w-auto d-inline-block" value="#000000" />
-        <button class="btn btn-primary ms-3">Lưu nội dung</button>
+        <button class="btn btn-primary ms-3" onclick="saveContentFromEditor(@Model.Id)">Lưu nội dung</button>
     </div>
 </div>
 
@@ -60,7 +52,7 @@
         </div>
         <div class="mb-2">
             <label class="form-label">Mô tả ngắn (tuỳ chọn)</label>
-            <textarea name="description" class="form-control" rows="3"></textarea>
+            <textarea id="assignmentDescEditor" name="description" class="form-control" rows="3"></textarea>
         </div>
         <button type="submit" class="btn btn-primary">Tạo bài tập</button>
     </form>
@@ -102,22 +94,57 @@
 </div>
 
 <script>
+    var newTextEditor;
+    var newAssignDescEditor;
+
     function showNewTextBlock(classId) {
         var area = document.getElementById('newBlockArea');
         area.innerHTML = '<textarea id="newText" class="form-control" rows="4"></textarea><div class="mt-2"><button class="btn btn-primary" onclick="createBlock(' + classId + ')">Lưu</button></div>';
+
+        // Initialize CKEditor for new text block
+        setTimeout(function () {
+            if (newTextEditor) {
+                newTextEditor.destroy();
+            }
+            newTextEditor = CKEDITOR.replace('newText', {
+                filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                height: 200
+            });
+        }, 100);
     }
     function showNewAssignment(classId) {
         var area = document.getElementById('newBlockArea');
         area.innerHTML = '\n            <div class="p-3 border rounded mb-3">\n                <div class="mb-2">\n                    <label class="form-label">Tiêu đề bài tập</label>\n                    <input id="newAssignTitle" class="form-control" />\n                </div>\n                <div class="mb-2">\n                    <label class="form-label">Mô tả ngắn (tuỳ chọn)</label>\n                    <textarea id="newAssignDesc" class="form-control" rows="2"></textarea>\n                </div>\n                <div class="text-end">\n                    <button class="btn btn-sm btn-secondary" onclick="cancelNewAssign()">Huỷ</button>\n                    <button class="btn btn-sm btn-primary" onclick="createAssignment(' + classId + ')">Tạo</button>\n                </div>\n            </div>';
+
+        // Initialize CKEditor for new assignment description
+        setTimeout(function () {
+            if (newAssignDescEditor) {
+                newAssignDescEditor.destroy();
+            }
+            newAssignDescEditor = CKEDITOR.replace('newAssignDesc', {
+                filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                height: 150
+            });
+        }, 100);
     }
 
     function cancelNewAssign() {
+        if (newAssignDescEditor) {
+            newAssignDescEditor.destroy();
+            newAssignDescEditor = null;
+        }
         document.getElementById('newBlockArea').innerHTML = '';
     }
 
     async function createAssignment(classId) {
         var title = document.getElementById('newAssignTitle')?.value;
-        var desc = document.getElementById('newAssignDesc')?.value;
+        var desc = newAssignDescEditor ? newAssignDescEditor.getData() : '';
         if (!title || title.trim().length == 0) { alert('Vui lòng nhập tiêu đề'); return; }
         var form = new FormData();
         var token = document.querySelector('input[name=__RequestVerificationToken]')?.value;
@@ -132,6 +159,10 @@
             // insert before the add picker (so new items appear above the picker)
             var picker = document.getElementById('addBlockPicker');
             picker.insertAdjacentHTML('beforebegin', html);
+            if (newAssignDescEditor) {
+                newAssignDescEditor.destroy();
+                newAssignDescEditor = null;
+            }
             document.getElementById('newBlockArea').innerHTML = '';
         } else {
             var txt = await res.text();
@@ -139,9 +170,12 @@
         }
     }
     async function createBlock(classId) {
-        var newTextEl = document.getElementById('newText');
-        if (!newTextEl) return;
-        var content = newTextEl.value;
+        if (!newTextEditor) return;
+        var content = newTextEditor.getData();
+        if (!content || content.trim().length == 0) {
+            alert('Vui lòng nhập nội dung');
+            return;
+        }
         var form = new FormData();
         form.append('__RequestVerificationToken', document.querySelector('input[name=__RequestVerificationToken]').value);
         form.append('classId', classId);
@@ -150,6 +184,10 @@
         if (res.ok) {
             var html = await res.text();
             document.getElementById('contentBlocksArea').insertAdjacentHTML('beforeend', html);
+            if (newTextEditor) {
+                newTextEditor.destroy();
+                newTextEditor = null;
+            }
             document.getElementById('newBlockArea').innerHTML = '';
         } else alert('Tạo thất bại');
     }
@@ -172,6 +210,10 @@
         var cancelBtn = e.target.closest('button[data-action="cancel"]');
         if (cancelBtn) {
             var block = cancelBtn.closest('.content-block');
+            if (editBlockEditor) {
+                editBlockEditor.destroy();
+                editBlockEditor = null;
+            }
             var ta = block.querySelector('textarea');
             if (ta) ta.remove();
             var display = block.querySelector('[data-editable]');
@@ -187,6 +229,8 @@
         if (ed) { enableEdit(ed); }
     });
 
+    var editBlockEditor;
+
     function enableEdit(el) {
         var block = el.closest('.content-block');
         if (!block) return;
@@ -194,6 +238,7 @@
         var content = el.innerHTML;
         var ta = document.createElement('textarea');
         ta.className = 'form-control';
+        ta.id = 'editBlockTextarea_' + id;
         ta.style.minHeight = '120px';
         ta.value = content.replace(/<br\s*\/?\s*>/g, '\n');
         el.style.display = 'none';
@@ -201,6 +246,21 @@
         if (controls) controls.style.display = 'block';
         if (controls) controls.innerHTML = '<button class="btn btn-sm btn-primary" data-action="save" data-id="' + id + '">Lưu</button> <button class="btn btn-sm btn-secondary" data-action="cancel">Huỷ</button>';
         block.insertBefore(ta, controls);
+
+        // Initialize CKEditor for editing
+        setTimeout(function () {
+            if (editBlockEditor) {
+                editBlockEditor.destroy();
+            }
+            editBlockEditor = CKEDITOR.replace('editBlockTextarea_' + id, {
+                filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                height: 200
+            });
+            editBlockEditor.setData(content);
+        }, 100);
     }
 
     document.addEventListener('click', async function (e) {
@@ -208,9 +268,16 @@
         if (!save) return;
         var id = save.getAttribute('data-id');
         var block = save.closest('.content-block');
-        var ta = block.querySelector('textarea');
-        if (!ta) return;
-        var content = ta.value;
+
+        var content;
+        if (editBlockEditor) {
+            content = editBlockEditor.getData();
+        } else {
+            var ta = block.querySelector('textarea');
+            if (!ta) return;
+            content = ta.value;
+        }
+
         var form = new FormData();
         var tokenInput = document.querySelector('input[name=__RequestVerificationToken]');
         if (tokenInput) form.append('__RequestVerificationToken', tokenInput.value);
@@ -218,6 +285,10 @@
         form.append('content', content);
         var res = await fetch('/ContentBlocks/Update', { method: 'POST', body: form });
         if (res.ok) {
+            if (editBlockEditor) {
+                editBlockEditor.destroy();
+                editBlockEditor = null;
+            }
             var html = await res.text();
             block.outerHTML = html;
         } else {
@@ -235,5 +306,64 @@
         if (res.ok) {
             document.querySelector('.content-block[data-block-id="' + id + '"]')?.remove();
         } else alert('Xóa thất bại');
+    }
+
+    // CKEditor initialization
+    var contentEditor;
+    var assignmentDescEditor;
+
+    // Initialize CKEditor when text area is shown
+    document.querySelector('a[onclick*="textArea"]').addEventListener('click', function () {
+        setTimeout(function () {
+            if (!contentEditor) {
+                contentEditor = CKEDITOR.replace('contentEditor', {
+                    filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                    filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                    filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                    filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                    height: 300
+                });
+            }
+        }, 100);
+    });
+
+    // Initialize CKEditor for assignment description
+    document.querySelector('a[onclick*="assignmentForm"]').addEventListener('click', function () {
+        setTimeout(function () {
+            if (!assignmentDescEditor) {
+                assignmentDescEditor = CKEDITOR.replace('assignmentDescEditor', {
+                    filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                    filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                    filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                    filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                    height: 200
+                });
+            }
+        }, 100);
+    });
+
+    // Save content from CKEditor
+    async function saveContentFromEditor(classId) {
+        if (!contentEditor) return;
+        var content = contentEditor.getData();
+        if (!content || content.trim().length == 0) {
+            alert('Vui lòng nhập nội dung');
+            return;
+        }
+
+        var form = new FormData();
+        form.append('__RequestVerificationToken', document.querySelector('input[name=__RequestVerificationToken]').value);
+        form.append('classId', classId);
+        form.append('content', content);
+
+        var res = await fetch('/ContentBlocks/Create', { method: 'POST', body: form });
+        if (res.ok) {
+            var html = await res.text();
+            document.getElementById('contentBlocksArea').insertAdjacentHTML('beforeend', html);
+            contentEditor.setData('');
+            document.getElementById('textArea').style.display = 'none';
+        } else {
+            alert('Tạo thất bại');
+        }
     }
 </script>

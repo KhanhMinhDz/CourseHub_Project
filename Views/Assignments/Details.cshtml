@@ -3,10 +3,55 @@
 @{
     ViewData["Title"] = Model.Title;
     var cls = ViewBag.Class as CourseManagement.Models.ClassRoom;
+    var currentUserId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var isInstructor = User?.IsInRole("Instructor") ?? false;
+    var isAdmin = User?.IsInRole("Admin") ?? false;
+    var canEdit = isAdmin || (cls != null && cls.InstructorId == currentUserId);
+
+    // Kiểm tra xem học viên đã nộp bài chưa
+    var db = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
+    as CourseManagement.Data.ApplicationDbContext;
+    var hasSubmitted = db?.Submissions.Any(s => s.AssignmentId == Model.Id && s.StudentId == currentUserId) ?? false;
 }
 
 <h1>@Model.Title</h1>
 <p class="text-muted">Lớp: @cls?.Title</p>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@* Hiển thị trạng thái nộp bài cho học viên *@
+@if (!canEdit && currentUserId != null && hasSubmitted)
+{
+    <div class="alert alert-success mb-3">
+        <i class="bi bi-check-circle-fill"></i> Bạn đã nộp bài tập này.
+        <a asp-controller="Submissions" asp-action="Index" asp-route-assignmentId="@Model.Id"
+            class="btn btn-sm btn-outline-success ms-2">
+            Xem bài nộp
+        </a>
+    </div>
+}
 
 <ul class="nav nav-tabs" id="assignmentTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -20,11 +65,6 @@
 </ul>
 <div class="tab-content p-3 border border-top-0">
     <div class="tab-pane fade show active" id="edit" role="tabpanel">
-        @{
-            // Determine whether current user can edit: instructor or admin
-            var canEdit = User.IsInRole("Admin") || (ViewBag.Class != null && ViewBag.Class.InstructorId ==
-            User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
-        }
         @if (!canEdit)
         {
             <div class="alert alert-info">Bạn không có quyền chỉnh sửa bài tập này.</div>
@@ -69,9 +109,6 @@
             }
         }
         @{
-            var db = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
-            as CourseManagement.Data.ApplicationDbContext;
-
             var questions = new List<CourseManagement.Models.Question>();
 
             if (db != null)
@@ -88,6 +125,12 @@
     </div>
     <div class="tab-pane fade" id="subs" role="tabpanel">
         <h4>Danh sách sinh viên và trạng thái nộp</h4>
+
+        @if (canEdit)
+        {
+            <a asp-action="DownloadAllSubmissions" asp-route-id="@Model.Id" class="btn btn-secondary mb-2">Tải tất cả bài
+                nộp (.zip)</a>
+        }
         <table class="table">
             <thead>
                 <tr>
@@ -114,7 +157,16 @@
                         <tr class="@(submitted ? "table-success" : "table-danger")">
                             <td>@(user?.FullName ?? user?.UserName)</td>
                             <td>@(submitted ? "Đã nộp" : "Chưa nộp")</td>
-                            <td>@(submitted && sub?.FilePath != null ? Html.Raw($"<a href='/{sub.FilePath}'>Tải</a>") : "-")
+                            <td>
+                                @if (submitted && !string.IsNullOrEmpty(sub?.FilePath))
+                                {
+                                    // Link trực tiếp tới file trong wwwroot (FilePath nên là /uploads/filename)
+                                    <a href="@sub.FilePath" download>Tải</a>
+                                }
+                                else
+                                {
+                                    <text>-</text>
+                                }
                             </td>
                         </tr>
                     }

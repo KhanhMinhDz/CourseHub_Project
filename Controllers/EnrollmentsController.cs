@@ -78,7 +78,19 @@ namespace CourseManagement.Controllers
             // kiểm tra mật khẩu nếu có
             if (!string.IsNullOrEmpty(c.EnrollmentPasswordHash))
             {
+                if (string.IsNullOrEmpty(c.InstructorId))
+                {
+                    TempData["EnrollError"] = "Không thể xác thực người hướng dẫn để kiểm tra mật khẩu.";
+                    return RedirectToAction("EnrollPage", new { classId = classId });
+                }
+
                 var instr = await _userManager.FindByIdAsync(c.InstructorId);
+                if (instr == null)
+                {
+                    TempData["EnrollError"] = "Không thể tìm thấy người hướng dẫn để kiểm tra mật khẩu.";
+                    return RedirectToAction("EnrollPage", new { classId = classId });
+                }
+
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<CourseManagement.Data.ApplicationUser>();
                 var verify = hasher.VerifyHashedPassword(instr, c.EnrollmentPasswordHash, password);
                 if (verify == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)

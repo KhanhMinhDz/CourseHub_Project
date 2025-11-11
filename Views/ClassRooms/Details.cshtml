@@ -17,7 +17,8 @@ else
 {
     <div>
         <h4>Nội dung khóa học:</h4>
-        @foreach (var block in ((IEnumerable<CourseManagement.Models.ContentBlock>)Model.ContentBlocks).OrderBy(cb => cb.Order))
+        @foreach (var block in ((IEnumerable<CourseManagement.Models.ContentBlock>)Model.ContentBlocks).OrderBy(cb =>
+            cb.Order))
         {
             <div class="mb-3 p-2 border rounded">
                 @Html.Raw(block.Content)
@@ -29,7 +30,7 @@ else
             <div class="mb-3 p-3 border bg-light">
                 <h5>@a.Title</h5>
                 <p>@a.Description</p>
-                <a class="btn btn-sm btn-primary" href="@Url.Action("Take", "Assignments", new { id = a.Id })">Làm bài</a>
+                <a class="btn btn-sm btn-primary" href="@Url.Action("TakeExam", "Assignments", new { id = a.Id })">Làm bài</a>
             </div>
         }
     </div>
