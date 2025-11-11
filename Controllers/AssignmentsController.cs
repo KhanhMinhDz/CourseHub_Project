@@ -73,7 +73,7 @@ namespace CourseManagement.Controllers
         [HttpPost]
         [Authorize(Roles = "Instructor")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditDescription(int id, string? description, string? title)
+        public async Task<IActionResult> EditDescription(int id, string? description, string? title, DateTime? dueDate)
         {
             var a = await _context.Assignments.FindAsync(id);
             if (a == null) return NotFound();
@@ -84,8 +84,12 @@ namespace CourseManagement.Controllers
 
             if (!string.IsNullOrEmpty(title)) a.Title = title;
             a.Description = description;
+            a.DueDate = dueDate?.ToUniversalTime(); // Convert to UTC for database
+
             _context.Assignments.Update(a);
             await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Cập nhật bài tập thành công!";
             return RedirectToAction(nameof(Details), new { id = a.Id });
         }
 

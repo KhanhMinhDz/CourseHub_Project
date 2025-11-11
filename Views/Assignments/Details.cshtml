@@ -71,18 +71,35 @@
         }
         else
         {
-            <form asp-action="EditDescription" method="post">
+            <form asp-action="EditDescription" method="post" id="editAssignmentForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.Id" />
-                <div class="mb-3">
-                    <label class="form-label">Tiêu đề</label>
-                    <input name="title" class="form-control" value="@Model.Title" />
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label class="form-label">Tiêu đề</label>
+                            <input name="title" class="form-control" value="@Model.Title" required />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Hạn nộp bài (Deadline)</label>
+                            <input type="datetime-local" name="dueDate" class="form-control" 
+                                   value="@(Model.DueDate?.ToLocalTime().ToString("yyyy-MM-ddTHH:mm"))" />
+                            <small class="text-muted">Để trống = không giới hạn thời gian</small>
+                        </div>
+                    </div>
                 </div>
+                
                 <div class="mb-3">
                     <label class="form-label">Nội dung / Đề bài</label>
-                    <textarea name="description" class="form-control" rows="8">@Model.Description</textarea>
+                    <textarea id="descriptionEditor" name="description" class="form-control" rows="8">@Model.Description</textarea>
                 </div>
-                <button class="btn btn-primary" type="submit">Lưu</button>
+                
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-save"></i> Lưu thay đổi
+                </button>
             </form>
             <hr />
             <h4>📂 Tải lên file câu hỏi (CSV hoặc Excel)</h4>
@@ -175,3 +192,23 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Initialize CKEditor for description
+        var descriptionEditor = CKEDITOR.replace('descriptionEditor', {
+            filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+            filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+            filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+            filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+            height: 300
+        });
+
+        // Update textarea before form submit
+        document.getElementById('editAssignmentForm')?.addEventListener('submit', function(e) {
+            for (var instance in CKEDITOR.instances) {
+                CKEDITOR.instances[instance].updateElement();
+            }
+        });
+    </script>
+}
