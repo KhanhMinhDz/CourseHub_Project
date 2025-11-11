@@ -1,6 +1,8 @@
 @{
     var isEnrolled = ViewBag.IsEnrolled ?? false;
     var isInstructor = ViewBag.IsInstructor ?? false;
+    var activeSession = ViewBag.ActiveAttendanceSession as CourseManagement.Models.AttendanceSession;
+    var hasAttended = ViewBag.HasAttended ?? false;
 }
 
 @if (!isEnrolled && !isInstructor)
@@ -15,12 +17,55 @@
 }
 else
 {
+    <!-- Attendance Section for Students -->
+    @if (isEnrolled && !isInstructor && activeSession != null)
+    {
+        <div class="alert alert-info mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="alert-heading mb-2">
+                        <i class="bi bi-calendar-check-fill me-2"></i>Điểm danh đang mở
+                    </h5>
+                    <p class="mb-0">
+                        <i class="bi bi-clock me-1"></i>
+                        Mở lúc: <strong>@activeSession.CreatedAt.ToString("HH:mm dd/MM/yyyy")</strong>
+                        <br>
+                        <i class="bi bi-clock-fill me-1"></i>
+                        Đóng lúc: <strong>@activeSession.CloseAt.ToString("HH:mm dd/MM/yyyy")</strong>
+                    </p>
+                    @if (hasAttended)
+                    {
+                        <div class="mt-2">
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-check-circle-fill me-1"></i>Đã điểm danh
+                            </span>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-4 text-end">
+                    @if (!hasAttended)
+                    {
+                        <button id="attendanceBtn" class="btn btn-success btn-lg" onclick="markAttendance(@activeSession.Id)">
+                            <i class="bi bi-hand-index-thumb me-2"></i>Điểm danh ngay
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-secondary btn-lg" disabled>
+                            <i class="bi bi-check-circle-fill me-2"></i>Đã điểm danh
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
     <div>
         <h4>Nội dung khóa học:</h4>
         @foreach (var block in ((IEnumerable<CourseManagement.Models.ContentBlock>)Model.ContentBlocks).OrderBy(cb =>
             cb.Order))
         {
-            <div class="mb-3 p-2 border rounded">
+            <div class="mb-3 p-2 border rounded content-display">
                 @Html.Raw(block.Content)
             </div>
         }
@@ -29,9 +74,45 @@ else
         {
             <div class="mb-3 p-3 border bg-light">
                 <h5>@a.Title</h5>
-                <p>@a.Description</p>
+                <p class="content-display">@a.Description</p>
                 <a class="btn btn-sm btn-primary" href="@Url.Action("TakeExam", "Assignments", new { id = a.Id })">Làm bài</a>
             </div>
         }
     </div>
+}
+
+@section Scripts {
+    <script>
+        async function markAttendance(sessionId) {
+            const btn = document.getElementById('attendanceBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang điểm danh...';
+
+            try {
+                const response = await fetch('/ClassRooms/MarkAttendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `sessionId=${sessionId}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`✅ ${result.message}\nThời gian: ${result.attendedAt}`);
+                    location.reload();
+                } else {
+                    alert('❌ ' + result.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-hand-index-thumb me-2"></i>Điểm danh ngay';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-hand-index-thumb me-2"></i>Điểm danh ngay';
+            }
+        }
+    </script>
 }

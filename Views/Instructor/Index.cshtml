@@ -1,17 +1,93 @@
 @model IEnumerable<CourseManagement.Models.ClassRoom>
 
-<h1>Dashboard giảng viên</h1>
+@{
+    Layout = "~/Views/Shared/_InstructorLayout.cshtml";
+    ViewData["Title"] = "Quản lý khóa học";
+}
 
-<p><a class="btn btn-success" asp-action="Create">+ Tạo lớp mới</a></p>
+<!-- Page Header -->
+<div class="dashboard-card">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="mb-0">
+            <i class="bi bi-book-half me-2"></i>Danh sách khóa học
+        </h1>
+        <a class="btn btn-success" asp-action="Create">
+            <i class="bi bi-plus-circle me-1"></i>Tạo lớp mới
+        </a>
+    </div>
+</div>
 
-<ul>
-    @foreach (var c in Model)
-    {
-        <li>
-            <strong>@c.Title</strong> -
-            <a asp-action="Edit" asp-route-id="@c.Id">Chỉnh sửa</a> -
-            <a asp-action="Enrollments" asp-route-id="@c.Id">Danh sách sinh viên</a> -
-            <a asp-controller="Assignments" asp-action="Index" asp-route-classId="@c.Id">Bài tập</a>
-        </li>
-    }
-</ul>
+<!-- Course List -->
+@if (Model.Any())
+{
+    <div class="row">
+        @foreach (var c in Model)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-book me-2"></i>@c.Title
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var db = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
+                            as CourseManagement.Data.ApplicationDbContext;
+                            var assignmentCount = db?.Assignments.Count(a => a.ClassRoomId == c.Id) ?? 0;
+                            var studentCount = db?.Enrollments.Count(e => e.ClassRoomId == c.Id) ?? 0;
+                        }
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">
+                                    <i class="bi bi-people-fill me-1"></i>Học viên:
+                                </span>
+                                <strong>@studentCount</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">
+                                    <i class="bi bi-clipboard-check me-1"></i>Bài tập:
+                                </span>
+                                <strong>@assignmentCount</strong>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(c.EnrollmentPasswordHash))
+                        {
+                            <span class="badge bg-info mb-2">
+                                <i class="bi bi-shield-lock-fill me-1"></i>Có mật khẩu
+                            </span>
+                        }
+                    </div>
+                    <div class="card-footer bg-light border-0">
+                        <div class="d-grid gap-2">
+                            <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-primary">
+                                <i class="bi bi-pencil-square me-1"></i>Quản lý lớp học
+                            </a>
+                        </div>
+                        <div class="btn-group w-100 mt-2" role="group">
+                            <a asp-action="Enrollments" asp-route-id="@c.Id" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-people me-1"></i>Học viên
+                            </a>
+                            <a asp-controller="Assignments" asp-action="Index" asp-route-classId="@c.Id"
+                                class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-list-task me-1"></i>Bài tập
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="dashboard-card text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 4rem; color: #dee2e6;"></i>
+        <h4 class="mt-3 text-muted">Chưa có lớp học nào</h4>
+        <p class="text-muted">Bắt đầu bằng cách tạo lớp học đầu tiên của bạn</p>
+        <a class="btn btn-success btn-lg mt-2" asp-action="Create">
+            <i class="bi bi-plus-circle me-1"></i>Tạo lớp mới
+        </a>
+    </div>
+}

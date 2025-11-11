@@ -16,6 +16,8 @@ namespace CourseManagement.Data
         public DbSet<Submission> Submissions { get; set; }
         public DbSet<ContentBlock> ContentBlocks { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<AttendanceSession> AttendanceSessions { get; set; }
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
 
     }
 }

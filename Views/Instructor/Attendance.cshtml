@@ -1,0 +1,121 @@
+@model List<CourseManagement.Models.ClassRoom>
+
+@{
+    Layout = "~/Views/Shared/_InstructorLayout.cshtml";
+    ViewData["Title"] = "Quản lý điểm danh";
+}
+
+<div class="dashboard-card">
+    <h1 class="mb-4">
+        <i class="bi bi-calendar-check-fill me-2"></i>Quản lý điểm danh
+    </h1>
+    <p class="text-muted">Tạo phiên điểm danh mới cho lớp học của bạn</p>
+</div>
+
+<div class="row">
+    @if (ViewBag.Classes != null && ((List<CourseManagement.Models.ClassRoom>)ViewBag.Classes).Any())
+    {
+        foreach (var cls in (List<CourseManagement.Models.ClassRoom>)ViewBag.Classes)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-book me-2 text-primary"></i>@cls.Title
+                        </h5>
+                        <p class="card-text text-muted">
+                            <small>@cls.Description</small>
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-clock me-1"></i>Thời gian mở (phút):
+                            </label>
+                            <input type="number" 
+                                   class="form-control duration-input" 
+                                   id="duration-@cls.Id" 
+                                   value="15" 
+                                   min="1" 
+                                   max="120">
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="openAttendance(@cls.Id)">
+                                <i class="bi bi-check-circle me-1"></i>Mở điểm danh
+                            </button>
+                            <a href="@Url.Action("AttendanceSessions", new { classRoomId = cls.Id })" 
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-list-ul me-1"></i>Xem lịch sử
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle me-2"></i>
+                Bạn chưa có lớp học nào. Vui lòng tạo lớp học trước.
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        async function openAttendance(classId) {
+            const durationInput = document.getElementById(`duration-${classId}`);
+            const duration = parseInt(durationInput.value);
+
+            if (duration < 1 || duration > 120) {
+                alert('Thời gian phải từ 1-120 phút');
+                return;
+            }
+
+            if (!confirm(`Mở điểm danh trong ${duration} phút?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/Instructor/CreateAttendanceSession', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `classRoomId=${classId}&durationMinutes=${duration}`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`${result.message}\nĐóng lúc: ${result.closeAt}`);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra. Vui lòng thử lại!');
+            }
+        }
+    </script>
+}
+
+<style>
+    .card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+    }
+
+    .duration-input {
+        font-weight: bold;
+        text-align: center;
+    }
+</style>

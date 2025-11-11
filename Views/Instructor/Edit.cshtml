@@ -1,111 +1,179 @@
 @model CourseManagement.Models.ClassRoom
 
-<h1>Chỉnh sửa lớp: @Model.Title</h1>
-
-@* Hiển thị thông báo từ TempData *@
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+@{
+    Layout = "~/Views/Shared/_InstructorLayout.cshtml";
+    ViewData["Title"] = "Quản lý khóa học - " + Model.Title;
 }
 
-@if (!string.IsNullOrEmpty(Model.EnrollmentPasswordHash))
-{
-    <div class="alert alert-info">Lớp hiện có mật khẩu ghi danh đặt sẵn.</div>
-}
-
-<form method="post" class="row g-2">
-    @Html.AntiForgeryToken()
-    <div class="col-md-8">
-        <label class="form-label">Mật khẩu ghi danh (để trống để xoá)</label>
-        <input name="enrollmentPassword" class="form-control" />
+<!-- Page Header -->
+<div class="dashboard-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">
+            <i class="bi bi-book me-2"></i>@Model.Title
+        </h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+        </a>
     </div>
-    <div class="col-md-4 align-self-end">
-        <button type="submit" class="btn btn-primary">Lưu</button>
-    </div>
-</form>
 
-<hr />
-<h3>Nội dung lớp</h3>
-<!-- Simple editor: choose Text or Assignment -->
-<div class="mb-3">
-    <label class="form-label">Thêm nội dung</label>
-    <div>
-        <a class="btn btn-outline-secondary me-2" href="#"
-            onclick="document.getElementById('textArea').style.display='block'; document.getElementById('assignmentForm').style.display='none'; return false;">Text</a>
-        <a class="btn btn-outline-secondary" href="#"
-            onclick="document.getElementById('assignmentForm').style.display='block'; document.getElementById('textArea').style.display='none'; return false;">Bài
-            tập</a>
-    </div>
-</div>
-
-<!-- Text editor area (simple textarea for now) -->
-<div id="textArea" style="display:none;">
-    <label class="form-label">Nội dung (Text)</label>
-    <textarea id="contentEditor" class="form-control" rows="6"></textarea>
-    <div class="mt-2">
-        <button class="btn btn-primary ms-3" onclick="saveContentFromEditor(@Model.Id)">Lưu nội dung</button>
-    </div>
-</div>
-
-<!-- Create assignment quick form -->
-<div id="assignmentForm" style="display:none;">
-    <form asp-controller="Assignments" asp-action="CreateFromEditor" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="classId" value="@Model.Id" />
-        <div class="mb-2">
-            <label class="form-label">Tiêu đề bài tập</label>
-            <input name="title" class="form-control" />
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Mô tả ngắn (tuỳ chọn)</label>
-            <textarea id="assignmentDescEditor" name="description" class="form-control" rows="3"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Tạo bài tập</button>
-    </form>
-</div>
-
-<div class="mt-4" id="contentBlocksArea">
-    @* Anti-forgery token for AJAX posts *@
-    @Html.AntiForgeryToken()
-    @{
-        var db = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext)) as
-        CourseManagement.Data.ApplicationDbContext;
-    }
-    @if (db != null)
+    @* Hiển thị thông báo từ TempData *@
+    @if (TempData["Success"] != null)
     {
-        // Render assignment blocks first so they appear in the content flow and persist after reload
-        var assigns = db.Assignments.Where(a => a.ClassRoomId == Model.Id).OrderBy(a => a.CreatedAt).ToList();
-        foreach (var a in assigns)
-        {
-            <partial name="_AssignmentBlock" model="a" />
-        }
-
-        var list = db.ContentBlocks.Where(cb => cb.ClassRoomId == Model.Id).OrderBy(cb => cb.Order).ToList();
-        foreach (var b in list)
-        {
-            <partial name="_ContentBlock" model="b" />
-        }
-    }
-    <div id="addBlockPicker" class="p-3 border rounded mt-3"
-        onmouseover="this.querySelector('.picker').style.display='block'"
-        onmouseout="this.querySelector('.picker').style.display='none'">
-        <div class="picker" style="display:none;">
-            <button class="btn btn-outline-secondary me-2"
-                onclick="showNewTextBlock(@Model.Id); return false;">Text</button>
-            <button class="btn btn-outline-secondary" onclick="showNewAssignment(@Model.Id); return false;">Bài
-                tập</button>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <div id="newBlockArea"></div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.EnrollmentPasswordHash))
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-shield-lock-fill me-2"></i>Lớp hiện có mật khẩu ghi danh đặt sẵn.
+        </div>
+    }
+
+    <!-- Enrollment Password Form -->
+    <div class="card border-0 bg-light">
+        <div class="card-body">
+            <h5 class="card-title">
+                <i class="bi bi-key-fill me-2"></i>Mật khẩu ghi danh
+            </h5>
+            <form method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <div class="col-md-8">
+                    <label class="form-label">Mật khẩu ghi danh (để trống để xoá)</label>
+                    <input name="enrollmentPassword" class="form-control"
+                        placeholder="Nhập mật khẩu mới hoặc để trống để xóa" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save me-1"></i>Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Course Content Section -->
+<div class="dashboard-card">
+    <h3><i class="bi bi-layers-fill me-2"></i>Nội dung lớp học</h3>
+
+    <!-- Add Content Section -->
+    <div class="add-content-section">
+        <label class="form-label">Thêm nội dung mới</label>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary"
+                onclick="document.getElementById('textArea').style.display='block'; document.getElementById('assignmentForm').style.display='none';">
+                <i class="bi bi-file-text me-1"></i>Text
+            </button>
+            <button type="button" class="btn btn-outline-primary"
+                onclick="document.getElementById('assignmentForm').style.display='block'; document.getElementById('textArea').style.display='none';">
+                <i class="bi bi-clipboard-check me-1"></i>Bài tập
+            </button>
+        </div>
+    </div>
+
+    <!-- Text editor area (simple textarea for now) -->
+    <div id="textArea" style="display:none;" class="card border-primary mt-3">
+        <div class="card-header bg-primary text-white">
+            <i class="bi bi-file-text me-2"></i>Thêm nội dung văn bản
+        </div>
+        <div class="card-body">
+            <label class="form-label">Nội dung</label>
+            <textarea id="contentEditor" class="form-control" rows="6"></textarea>
+            <div class="mt-3 text-end">
+                <button class="btn btn-secondary me-2"
+                    onclick="document.getElementById('textArea').style.display='none'">
+                    <i class="bi bi-x-lg me-1"></i>Hủy
+                </button>
+                <button class="btn btn-primary" onclick="saveContentFromEditor(@Model.Id)">
+                    <i class="bi bi-save me-1"></i>Lưu nội dung
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create assignment quick form -->
+    <div id="assignmentForm" style="display:none;" class="card border-success mt-3">
+        <div class="card-header bg-success text-white">
+            <i class="bi bi-clipboard-check me-2"></i>Tạo bài tập mới
+        </div>
+        <div class="card-body">
+            <form asp-controller="Assignments" asp-action="CreateFromEditor" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="classId" value="@Model.Id" />
+                <div class="mb-3">
+                    <label class="form-label">Tiêu đề bài tập</label>
+                    <input name="title" class="form-control" placeholder="Nhập tiêu đề bài tập" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mô tả ngắn (tuỳ chọn)</label>
+                    <textarea id="assignmentDescEditor" name="description" class="form-control" rows="3"
+                        placeholder="Nhập mô tả cho bài tập"></textarea>
+                </div>
+                <div class="text-end">
+                    <button type="button" class="btn btn-secondary me-2"
+                        onclick="document.getElementById('assignmentForm').style.display='none'">
+                        <i class="bi bi-x-lg me-1"></i>Hủy
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-plus-circle me-1"></i>Tạo bài tập
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Content Blocks List -->
+    <div class="mt-4" id="contentBlocksArea">
+        @* Anti-forgery token for AJAX posts *@
+        @Html.AntiForgeryToken()
+        @{
+            var db = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext)) as
+            CourseManagement.Data.ApplicationDbContext;
+        }
+        @if (db != null)
+        {
+            // Render assignment blocks first so they appear in the content flow and persist after reload
+            var assigns = db.Assignments.Where(a => a.ClassRoomId == Model.Id).OrderBy(a => a.CreatedAt).ToList();
+            var contentBlocks = db.ContentBlocks.Where(cb => cb.ClassRoomId == Model.Id).OrderBy(cb => cb.Order).ToList();
+
+            if (assigns.Any() || contentBlocks.Any())
+            {
+                <h5 class="mb-3"><i class="bi bi-list-ul me-2"></i>Danh sách nội dung</h5>
+            }
+
+            foreach (var a in assigns)
+            {
+                <partial name="_AssignmentBlock" model="a" />
+            }
+
+            foreach (var b in contentBlocks)
+            {
+                <partial name="_ContentBlock" model="b" />
+            }
+        }
+        <div id="addBlockPicker" class="p-3 border rounded mt-3 text-center add-content-section"
+            onmouseover="this.querySelector('.picker').style.display='block'"
+            onmouseout="this.querySelector('.picker').style.display='none'">
+            <div class="picker" style="display:none;">
+                <button class="btn btn-outline-primary me-2" onclick="showNewTextBlock(@Model.Id); return false;">
+                    <i class="bi bi-file-text me-1"></i>Text
+                </button>
+                <button class="btn btn-outline-success" onclick="showNewAssignment(@Model.Id); return false;">
+                    <i class="bi bi-clipboard-check me-1"></i>Bài tập
+                </button>
+            </div>
+            <div id="newBlockArea"></div>
+        </div>
     </div>
 </div>
 
@@ -328,34 +396,43 @@
     var contentEditor;
     var assignmentDescEditor;
 
-    // Initialize CKEditor when text area is shown
-    document.querySelector('a[onclick*="textArea"]').addEventListener('click', function () {
-        setTimeout(function () {
-            if (!contentEditor) {
-                contentEditor = CKEDITOR.replace('contentEditor', {
-                    filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
-                    filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
-                    filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
-                    filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
-                    height: 300
-                });
-            }
-        }, 100);
-    });
+    // Initialize CKEditor when document is ready
+    document.addEventListener('DOMContentLoaded', function () {
+        // Event handler for Text button
+        var textButtons = document.querySelectorAll('button[onclick*="textArea"]');
+        textButtons.forEach(function(btn) {
+            btn.addEventListener('click', function () {
+                setTimeout(function () {
+                    if (!contentEditor) {
+                        contentEditor = CKEDITOR.replace('contentEditor', {
+                            filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                            filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                            filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                            filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                            height: 300
+                        });
+                    }
+                }, 200);
+            });
+        });
 
-    // Initialize CKEditor for assignment description
-    document.querySelector('a[onclick*="assignmentForm"]').addEventListener('click', function () {
-        setTimeout(function () {
-            if (!assignmentDescEditor) {
-                assignmentDescEditor = CKEDITOR.replace('assignmentDescEditor', {
-                    filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
-                    filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
-                    filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
-                    filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
-                    height: 200
-                });
-            }
-        }, 100);
+        // Event handler for Assignment button
+        var assignmentButtons = document.querySelectorAll('button[onclick*="assignmentForm"]');
+        assignmentButtons.forEach(function(btn) {
+            btn.addEventListener('click', function () {
+                setTimeout(function () {
+                    if (!assignmentDescEditor) {
+                        assignmentDescEditor = CKEDITOR.replace('assignmentDescEditor', {
+                            filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                            filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                            filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                            filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                            height: 200
+                        });
+                    }
+                }, 200);
+            });
+        });
     });
 
     // Save content from CKEditor

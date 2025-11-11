@@ -9,10 +9,12 @@ namespace CourseManagement.Controllers
     public class ClassRoomsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> _userManager;
 
-        public ClassRoomsController(ApplicationDbContext context)
+        public ClassRoomsController(ApplicationDbContext context, Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: /
@@ -39,13 +41,97 @@ namespace CourseManagement.Controllers
             {
                 ViewBag.IsEnrolled = await _context.Enrollments
                     .AnyAsync(e => e.ClassRoomId == id && e.StudentId == userId);
+
+                // Lấy phiên điểm danh đang active
+                var activeSession = await _context.AttendanceSessions
+                    .Where(s => s.ClassRoomId == id && s.IsActive && DateTime.Now < s.CloseAt)
+                    .OrderByDescending(s => s.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                ViewBag.ActiveAttendanceSession = activeSession;
+
+                // Kiểm tra xem học viên đã điểm danh chưa
+                if (activeSession != null)
+                {
+                    var hasAttended = await _context.AttendanceRecords
+                        .AnyAsync(r => r.AttendanceSessionId == activeSession.Id
+                                    && r.StudentId == userId
+                                    && r.IsPresent);
+                    ViewBag.HasAttended = hasAttended;
+                }
+                else
+                {
+                    ViewBag.HasAttended = false;
+                }
             }
             else
             {
                 ViewBag.IsEnrolled = false;
+                ViewBag.ActiveAttendanceSession = null;
+                ViewBag.HasAttended = false;
             }
 
             return View(c);
+        }
+
+        // Học viên điểm danh
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> MarkAttendance(int sessionId)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            var session = await _context.AttendanceSessions.FindAsync(sessionId);
+            if (session == null)
+                return Json(new { success = false, message = "Không tìm thấy phiên điểm danh" });
+
+            // Kiểm tra phiên còn mở không
+            if (!session.IsActive || DateTime.Now > session.CloseAt)
+                return Json(new { success = false, message = "Phiên điểm danh đã đóng" });
+
+            // Kiểm tra học viên có trong lớp không
+            var isEnrolled = await _context.Enrollments
+                .AnyAsync(e => e.ClassRoomId == session.ClassRoomId && e.StudentId == userId);
+
+            if (!isEnrolled)
+                return Json(new { success = false, message = "Bạn chưa ghi danh vào lớp này" });
+
+            // Tìm bản ghi điểm danh
+            var record = await _context.AttendanceRecords
+                .FirstOrDefaultAsync(r => r.AttendanceSessionId == sessionId && r.StudentId == userId);
+
+            if (record == null)
+            {
+                // Tạo mới nếu chưa có
+                record = new AttendanceRecord
+                {
+                    AttendanceSessionId = sessionId,
+                    StudentId = userId!,
+                    IsPresent = true,
+                    AttendedAt = DateTime.Now
+                };
+                _context.AttendanceRecords.Add(record);
+            }
+            else if (record.IsPresent)
+            {
+                return Json(new { success = false, message = "Bạn đã điểm danh rồi" });
+            }
+            else
+            {
+                // Cập nhật nếu đã có nhưng chưa điểm danh
+                record.IsPresent = true;
+                record.AttendedAt = DateTime.Now;
+                _context.AttendanceRecords.Update(record);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                message = "Điểm danh thành công",
+                attendedAt = DateTime.Now.ToString("HH:mm dd/MM/yyyy")
+            });
         }
 
 

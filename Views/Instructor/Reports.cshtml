@@ -1,0 +1,386 @@
+@model CourseManagement.Models.GradeReportViewModel
+
+@{
+    Layout = "~/Views/Shared/_InstructorLayout.cshtml";
+    ViewData["Title"] = "Báo cáo & Thống kê";
+    var sessions = ViewBag.AttendanceSessions as List<CourseManagement.Models.AttendanceSession> ?? new
+    List<CourseManagement.Models.AttendanceSession>();
+}
+
+<!-- Page Header -->
+<div class="dashboard-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">
+            <i class="bi bi-bar-chart-fill me-2"></i>Báo cáo & Thống kê
+        </h1>
+        <div>
+            <a href="@Url.Action("ExportToExcel", "Instructor")" class="btn btn-success me-2">
+                <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+            </a>
+            <button id="editModeBtn" class="btn btn-warning">
+                <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
+            </button>
+            <button id="saveModeBtn" class="btn btn-success" style="display:none;">
+                <i class="bi bi-save me-1"></i>Lưu
+            </button>
+        </div>
+    </div>
+
+    <p class="text-muted mb-0">
+        <i class="bi bi-info-circle me-1"></i>
+        Bảng điểm tổng hợp của tất cả học viên
+    </p>
+</div>
+
+<!-- Grade Report Table -->
+@if (Model.Students.Any())
+{
+    <div class="dashboard-card">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="gradeTable">
+                <thead class="table-light">
+                    <tr>
+                        <th rowspan="2" class="align-middle text-center" style="min-width: 50px;">
+                            <i class="bi bi-hash"></i>
+                        </th>
+                        <th rowspan="2" class="align-middle" style="min-width: 200px;">
+                            <i class="bi bi-person-fill me-1"></i>Họ tên
+                        </th>
+                        @if (sessions.Any())
+                        {
+                            <th colspan="@sessions.Count" class="text-center bg-success bg-opacity-10" rowspan="1">
+                                <i class="bi bi-calendar-check me-1"></i>Điểm danh
+                            </th>
+                        }
+                        @if (Model.Assignments.Any())
+                        {
+                            <th colspan="@Model.Assignments.Count" class="text-center bg-info bg-opacity-10">
+                                <i class="bi bi-clipboard-check me-1"></i>Bài tập
+                            </th>
+                        }
+                        <th rowspan="2" class="align-middle text-center bg-warning bg-opacity-25" style="min-width: 100px;">
+                            <i class="bi bi-star-fill me-1"></i>Điểm TB
+                        </th>
+                    </tr>
+                    <tr>
+                        @if (sessions.Any())
+                        {
+                            @foreach (var session in sessions)
+                            {
+                                <th class="text-center" style="min-width: 80px;">
+                                    <small>
+                                        @session.CreatedAt.ToString("dd/MM")
+                                        <br>
+                                        <span class="text-muted">@session.CreatedAt.ToString("HH:mm")</span>
+                                    </small>
+                                </th>
+                            }
+                        }
+                        @foreach (var assignment in Model.Assignments)
+                        {
+                            <th class="text-center" style="min-width: 120px;">
+                                <small>
+                                    @assignment.Title
+                                    @{
+                                        var isQuiz = Model.Students.FirstOrDefault()?.AssignmentGrades
+                                        .GetValueOrDefault(assignment.Id)?.IsQuiz ?? false;
+                                    }
+                                    @if (isQuiz)
+                                    {
+                                        <span class="badge bg-success ms-1">TN</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary ms-1">TL</span>
+                                    }
+                                </small>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int index = 1;
+                        foreach (var student in Model.Students)
+                        {
+                            <tr>
+                                <td class="text-center text-muted">@index</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">
+                                            @student.StudentName.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <strong>@student.StudentName</strong>
+                                    </div>
+                                </td>
+                                @if (sessions.Any())
+                                {
+                                    @foreach (var session in sessions)
+                                    {
+                                        var status = student.AttendanceStatuses.FirstOrDefault(s => s.SessionId == session.Id);
+                                        <td class="text-center">
+                                            @if (status != null && status.IsPresent)
+                                            {
+                                                <i class="bi bi-check-circle-fill text-success fs-4"
+                                                    title="Có mặt lúc @status.AttendedAt?.ToString("HH:mm")"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-x-circle-fill text-danger fs-4" title="Vắng"></i>
+                                            }
+                                        </td>
+                                    }
+                                }
+                                @foreach (var assignment in Model.Assignments)
+                                {
+                                    var grade = student.AssignmentGrades.GetValueOrDefault(assignment.Id);
+                                    <td class="text-center grade-cell" data-submission-id="@grade?.SubmissionId"
+                                        data-is-quiz="@(grade?.IsQuiz ?? false)" data-has-submitted="@(grade?.HasSubmitted ?? false)">
+                                        @if (grade != null && grade.HasSubmitted)
+                                        {
+                                            if (grade.IsQuiz)
+                                            {
+                                                // Bài trắc nghiệm - chỉ hiển thị, không cho sửa
+                                                <span class="badge bg-success fs-6">
+                                                    @(grade.Score?.ToString("F2") ?? "0.00")/10
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                // Bài tự luận - cho phép sửa điểm
+                                                <div class="grade-display">
+                                                    @if (grade.Score.HasValue)
+                                                    {
+                                                        <span class="badge bg-primary fs-6">
+                                                            @grade.Score.Value.ToString("F2")/10
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">
+                                                            <i class="bi bi-dash-circle"></i> Chưa chấm
+                                                        </span>
+                                                    }
+                                                </div>
+                                                <div class="grade-edit" style="display:none;">
+                                                    <input type="number" class="form-control form-control-sm grade-input" min="0" max="10"
+                                                        step="0.01" value="@(grade.Score?.ToString("F2") ?? "0")"
+                                                        style="width: 80px; display: inline-block;">
+                                                    <small class="text-muted">/10</small>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                <i class="bi bi-x-circle"></i> Chưa nộp
+                                            </span>
+                                        }
+                                    </td>
+                                }
+                                <td class="text-center fw-bold bg-warning bg-opacity-10">
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        @student.AverageScore.ToString("F2")
+                                    </span>
+                                </td>
+                            </tr>
+                            index++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Statistics Summary -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center border-primary">
+                    <div class="card-body">
+                        <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">@Model.Students.Count</h4>
+                        <p class="text-muted mb-0">Tổng học viên</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-success">
+                    <div class="card-body">
+                        <i class="bi bi-clipboard-check-fill text-success" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">@Model.Assignments.Count</h4>
+                        <p class="text-muted mb-0">Tổng bài tập</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-warning">
+                    <div class="card-body">
+                        <i class="bi bi-star-fill text-warning" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">
+                            @if (Model.Students.Any())
+                            {
+                                @Model.Students.Average(s => s.AverageScore).ToString("F2")
+                            }
+                            else
+                            {
+                                <text>0.00</text>
+                            }
+                        </h4>
+                        <p class="text-muted mb-0">Điểm TB chung</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-info">
+                    <div class="card-body">
+                        <i class="bi bi-graph-up-arrow text-info" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">
+                            @{
+                                var totalSubmissions = Model.Students.Sum(s =>
+                                s.AssignmentGrades.Values.Count(g => g.HasSubmitted));
+                                var totalPossible = Model.Students.Count * Model.Assignments.Count;
+                                var completionRate = totalPossible > 0
+                                ? (totalSubmissions * 100.0 / totalPossible)
+                                : 0;
+                            }
+                            @completionRate.ToString("F1")%
+                        </h4>
+                        <p class="text-muted mb-0">Tỷ lệ hoàn thành</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-card text-center py-5">
+        <i class="bi bi-clipboard-data" style="font-size: 4rem; color: #dee2e6;"></i>
+        <h4 class="mt-3 text-muted">Chưa có dữ liệu</h4>
+        <p class="text-muted">Báo cáo sẽ xuất hiện khi có học viên ghi danh và nộp bài</p>
+    </div>
+}
+
+<style>
+    .avatar-circle {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    #gradeTable {
+        font-size: 0.9rem;
+    }
+
+    #gradeTable th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .grade-cell {
+        transition: background-color 0.2s;
+    }
+
+    .grade-cell:hover {
+        background-color: #f8f9fa;
+    }
+
+    .grade-input {
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let isEditMode = false;
+        const changedGrades = new Map(); // submissionId -> newScore
+
+        document.getElementById('editModeBtn').addEventListener('click', function () {
+            isEditMode = true;
+            this.style.display = 'none';
+            document.getElementById('saveModeBtn').style.display = 'inline-block';
+
+            // Hiển thị input cho các bài tự luận chưa chấm hoặc đã chấm
+            document.querySelectorAll('.grade-cell').forEach(cell => {
+                const isQuiz = cell.getAttribute('data-is-quiz') === 'True';
+                const hasSubmitted = cell.getAttribute('data-has-submitted') === 'True';
+
+                if (!isQuiz && hasSubmitted) {
+                    cell.querySelector('.grade-display').style.display = 'none';
+                    cell.querySelector('.grade-edit').style.display = 'block';
+                }
+            });
+        });
+
+        document.getElementById('saveModeBtn').addEventListener('click', async function () {
+            const saveBtn = this;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Lưu từng điểm đã thay đổi
+            for (const [submissionId, score] of changedGrades) {
+                try {
+                    const response = await fetch('/Instructor/UpdateGrade', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `submissionId=${submissionId}&score=${score}`
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        console.error('Error updating grade:', result.message);
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error('Error:', error);
+                }
+            }
+
+            if (errorCount === 0) {
+                alert(`Đã lưu thành công ${successCount} điểm!`);
+                location.reload(); // Reload để cập nhật điểm TB
+            } else {
+                alert(`Lưu thành công ${successCount} điểm, ${errorCount} lỗi. Vui lòng thử lại!`);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Lưu';
+            }
+        });
+
+        // Lắng nghe thay đổi điểm
+        document.querySelectorAll('.grade-input').forEach(input => {
+            input.addEventListener('change', function () {
+                const cell = this.closest('.grade-cell');
+                const submissionId = cell.getAttribute('data-submission-id');
+                const newScore = parseFloat(this.value);
+
+                if (submissionId && !isNaN(newScore) && newScore >= 0 && newScore <= 10) {
+                    changedGrades.set(parseInt(submissionId), newScore);
+                    this.classList.add('border-warning');
+                }
+            });
+        });
+    </script>
+}

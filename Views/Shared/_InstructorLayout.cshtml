@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CourseHub</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/css/instructor-dashboard.css" asp-append-version="true" />
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-0">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-mortarboard-fill me-2"></i>CourseHub
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target=".navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                    </ul>
+                    <partial name="_LoginPartial" />
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Giảng viên</h5>
+            </div>
+            <nav class="sidebar-nav">
+                @{
+                    var controller = ViewContext.RouteData.Values["Controller"]?.ToString();
+                    var action = ViewContext.RouteData.Values["Action"]?.ToString();
+                    var isIndexPage = action == "Index";
+                    var isStudentsPage = action == "Students";
+                    var isReportsPage = action == "Reports";
+                    var isAttendancePage = action == "Attendance" || action == "AttendanceSessions";
+                }
+                <a href="@Url.Action("Index", "Instructor")" class="sidebar-link @(isIndexPage ? "active" : "")">
+                    <i class="bi bi-book-half me-2"></i>
+                    <span>Quản lý khóa học</span>
+                </a>
+                <a href="@Url.Action("Students", "Instructor")" class="sidebar-link @(isStudentsPage ? "active" : "")">
+                    <i class="bi bi-people-fill me-2"></i>
+                    <span>Quản lý học viên</span>
+                </a>
+                <a href="@Url.Action("Reports", "Instructor")" class="sidebar-link @(isReportsPage ? "active" : "")">
+                    <i class="bi bi-bar-chart-fill me-2"></i>
+                    <span>Báo cáo & Thống kê</span>
+                </a>
+                <a href="@Url.Action("Attendance", "Instructor")"
+                    class="sidebar-link @(isAttendancePage ? "active" : "")">
+                    <i class="bi bi-calendar-check-fill me-2"></i>
+                    <span>Điểm danh</span>
+                </a>
+                <a href="#" class="sidebar-link">
+                    <i class="bi bi-gear-fill me-2"></i>
+                    <span>Cài đặt</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/ckeditor/ckeditor/ckeditor.js"></script>
+    <script src="~/ckfinder/ckfinder/ckfinder.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

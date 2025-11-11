@@ -1,0 +1,197 @@
+@model List<CourseManagement.Models.AttendanceViewModel>
+
+@{
+    Layout = "~/Views/Shared/_InstructorLayout.cshtml";
+    ViewData["Title"] = "Lịch sử điểm danh";
+}
+
+<div class="dashboard-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-0">
+                <i class="bi bi-clock-history me-2"></i>Lịch sử điểm danh
+            </h1>
+            <p class="text-muted mb-0">Lớp: <strong>@ViewBag.ClassName</strong></p>
+        </div>
+        <a href="@Url.Action("Attendance")" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="dashboard-card">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th><i class="bi bi-hash"></i></th>
+                        <th><i class="bi bi-calendar3 me-1"></i>Ngày mở</th>
+                        <th><i class="bi bi-clock me-1"></i>Giờ mở</th>
+                        <th><i class="bi bi-clock-fill me-1"></i>Giờ đóng</th>
+                        <th class="text-center"><i class="bi bi-people-fill me-1"></i>Tổng SV</th>
+                        <th class="text-center"><i class="bi bi-check-circle-fill text-success me-1"></i>Có mặt</th>
+                        <th class="text-center"><i class="bi bi-x-circle-fill text-danger me-1"></i>Vắng</th>
+                        <th class="text-center"><i class="bi bi-percent me-1"></i>Tỷ lệ</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int index = 1;
+                        foreach (var session in Model)
+                        {
+                            var attendanceRate = session.TotalStudents > 0 
+                                ? (session.PresentCount * 100.0 / session.TotalStudents) 
+                                : 0;
+                            
+                            <tr>
+                                <td>@index</td>
+                                <td>@session.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td>@session.CreatedAt.ToString("HH:mm")</td>
+                                <td>@session.CloseAt.ToString("HH:mm")</td>
+                                <td class="text-center"><strong>@session.TotalStudents</strong></td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">@session.PresentCount</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">@session.AbsentCount</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info">@attendanceRate.ToString("F1")%</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (session.IsActive)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-circle-fill blink me-1"></i>Đang mở
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Đã đóng</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (session.IsActive)
+                                    {
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="closeSession(@session.SessionId)">
+                                            <i class="bi bi-x-circle me-1"></i>Đóng
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                            index++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center border-primary">
+                    <div class="card-body">
+                        <i class="bi bi-calendar-check text-primary" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">@Model.Count</h4>
+                        <p class="text-muted mb-0">Tổng phiên</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-success">
+                    <div class="card-body">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">
+                            @if (Model.Any())
+                            {
+                                @Model.Average(s => s.TotalStudents > 0 ? (s.PresentCount * 100.0 / s.TotalStudents) : 0).ToString("F1")
+                            }
+                            else
+                            {
+                                <text>0.0</text>
+                            }%
+                        </h4>
+                        <p class="text-muted mb-0">Tỷ lệ TB có mặt</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-warning">
+                    <div class="card-body">
+                        <i class="bi bi-person-check text-warning" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">@Model.Sum(s => s.PresentCount)</h4>
+                        <p class="text-muted mb-0">Tổng lượt có mặt</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center border-danger">
+                    <div class="card-body">
+                        <i class="bi bi-person-x text-danger" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2">@Model.Sum(s => s.AbsentCount)</h4>
+                        <p class="text-muted mb-0">Tổng lượt vắng</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-card text-center py-5">
+        <i class="bi bi-calendar-x" style="font-size: 4rem; color: #dee2e6;"></i>
+        <h4 class="mt-3 text-muted">Chưa có phiên điểm danh nào</h4>
+        <p class="text-muted">Hãy mở điểm danh từ trang quản lý điểm danh</p>
+        <a href="@Url.Action("Attendance")" class="btn btn-primary mt-2">
+            <i class="bi bi-plus-circle me-1"></i>Mở điểm danh
+        </a>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        async function closeSession(sessionId) {
+            if (!confirm('Bạn có chắc muốn đóng phiên điểm danh này?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/Instructor/CloseAttendanceSession', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `sessionId=${sessionId}`
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra!');
+            }
+        }
+    </script>
+}
+
+<style>
+    @@keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .blink {
+        animation: blink 1.5s infinite;
+    }
+</style>
