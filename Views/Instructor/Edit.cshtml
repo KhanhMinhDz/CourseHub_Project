@@ -11,9 +11,17 @@
         <h1 class="mb-0">
             <i class="bi bi-book me-2"></i>@Model.Title
         </h1>
-        <a asp-action="Index" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
-        </a>
+        <div>
+            <a asp-action="Students" asp-route-classRoomId="@Model.Id" class="btn btn-info me-2">
+                <i class="bi bi-people-fill me-1"></i>Quản lý học viên
+            </a>
+            <a asp-action="Reports" asp-route-classRoomId="@Model.Id" class="btn btn-warning me-2">
+                <i class="bi bi-bar-chart-fill me-1"></i>Báo cáo & Thống kê
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+            </a>
+        </div>
     </div>
 
     @* Hiển thị thông báo từ TempData *@
@@ -400,7 +408,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         // Event handler for Text button
         var textButtons = document.querySelectorAll('button[onclick*="textArea"]');
-        textButtons.forEach(function(btn) {
+        textButtons.forEach(function (btn) {
             btn.addEventListener('click', function () {
                 setTimeout(function () {
                     if (!contentEditor) {
@@ -418,7 +426,7 @@
 
         // Event handler for Assignment button
         var assignmentButtons = document.querySelectorAll('button[onclick*="assignmentForm"]');
-        assignmentButtons.forEach(function(btn) {
+        assignmentButtons.forEach(function (btn) {
             btn.addEventListener('click', function () {
                 setTimeout(function () {
                     if (!assignmentDescEditor) {

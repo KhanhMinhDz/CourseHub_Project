@@ -3,16 +3,31 @@
 @{
     Layout = "~/Views/Shared/_InstructorLayout.cshtml";
     ViewData["Title"] = "Quản lý học viên";
-    var sessions = ViewBag.AttendanceSessions as List<CourseManagement.Models.AttendanceSession> ?? new List<CourseManagement.Models.AttendanceSession>();
+    var sessions = ViewBag.AttendanceSessions as List<CourseManagement.Models.AttendanceSession> ?? new
+    List<CourseManagement.Models.AttendanceSession>();
 }
 
 <!-- Page Header -->
 <div class="dashboard-card">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="mb-0">
-            <i class="bi bi-people-fill me-2"></i>Quản lý học viên
-        </h1>
         <div>
+            <h1 class="mb-0">
+                <i class="bi bi-people-fill me-2"></i>Quản lý học viên
+            </h1>
+            @if (ViewBag.ClassName != null)
+            {
+                <p class="text-muted mb-0 mt-2">
+                    <i class="bi bi-book me-1"></i>Lớp: <strong>@ViewBag.ClassName</strong>
+                </p>
+            }
+        </div>
+        <div>
+            @if (ViewBag.ClassRoomId != null)
+            {
+                <a asp-action="Edit" asp-route-id="@ViewBag.ClassRoomId" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-arrow-left me-1"></i>Quay lại lớp học
+                </a>
+            }
             <span class="badge bg-primary fs-6">
                 <i class="bi bi-person-check-fill me-1"></i>
                 Tổng: @Model.Count() học viên
@@ -22,7 +37,14 @@
 
     <p class="text-muted mb-0">
         <i class="bi bi-info-circle me-1"></i>
-        Danh sách tất cả học viên đã ghi danh vào các lớp học của bạn
+        @if (ViewBag.ClassName != null)
+        {
+            <text>Danh sách học viên đã ghi danh vào lớp này</text>
+        }
+        else
+        {
+            <text>Danh sách tất cả học viên đã ghi danh vào các lớp học của bạn</text>
+        }
     </p>
 </div>
 
@@ -93,8 +115,8 @@
                                     <td class="text-center">
                                         @if (status != null && status.IsPresent)
                                         {
-                                            <i class="bi bi-check-circle-fill text-success fs-4" 
-                                               title="Có mặt lúc @status.AttendedAt?.ToString("HH:mm")"></i>
+                                            <i class="bi bi-check-circle-fill text-success fs-4"
+                                                title="Có mặt lúc @status.AttendedAt?.ToString("HH:mm")"></i>
                                         }
                                         else
                                         {

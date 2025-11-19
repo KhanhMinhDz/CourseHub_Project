@@ -1,0 +1,81 @@
+@model List<CourseManagement.Models.UserManagementViewModel>
+@{
+    ViewData["Title"] = "Quản lý học viên";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-people-fill"></i> Danh sách học viên</h4>
+    <a asp-action="CreateStudent" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Thêm học viên
+    </a>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Tên đăng nhập</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var student in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <i class="bi bi-person-circle text-primary"></i>
+                                    <strong>@student.FullName</strong>
+                                </td>
+                                <td>@student.Email</td>
+                                <td>@student.UserName</td>
+                                <td class="text-end">
+                                    <a asp-action="EditStudent" asp-route-id="@student.Id" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil"></i> Sửa
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@student.Id">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
+                                    
+                                    <!-- Delete Confirmation Modal -->
+                                    <div class="modal fade" id="deleteModal-@student.Id" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Xác nhận xóa</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Bạn có chắc chắn muốn xóa học viên <strong>@student.FullName</strong>?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                    <form asp-action="DeleteStudent" method="post" class="d-inline">
+                                                        <input type="hidden" name="id" value="@student.Id" />
+                                                        <button type="submit" class="btn btn-danger">Xóa</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Chưa có học viên nào trong hệ thống.
+    </div>
+}

@@ -85,15 +85,25 @@ namespace CourseManagement.Controllers
         }
 
         // Quản lý tất cả học viên từ tất cả các lớp của giảng viên
-        public async Task<IActionResult> Students()
+        public async Task<IActionResult> Students(int? classRoomId = null)
         {
             var userId = _userManager.GetUserId(User);
 
-            // Lấy tất cả lớp học của giảng viên
-            var classIds = await _context.ClassRooms
-                .Where(c => c.InstructorId == userId)
-                .Select(c => c.Id)
-                .ToListAsync();
+            // Lấy tất cả lớp học của giảng viên hoặc lớp cụ thể
+            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
+
+            if (classRoomId.HasValue)
+            {
+                classQuery = classQuery.Where(c => c.Id == classRoomId.Value);
+                var selectedClass = await classQuery.FirstOrDefaultAsync();
+                if (selectedClass != null)
+                {
+                    ViewBag.ClassName = selectedClass.Title;
+                    ViewBag.ClassRoomId = classRoomId.Value;
+                }
+            }
+
+            var classIds = await classQuery.Select(c => c.Id).ToListAsync();
 
             // Lấy tất cả phiên điểm danh
             var allSessions = await _context.AttendanceSessions
@@ -156,14 +166,25 @@ namespace CourseManagement.Controllers
         }
 
         // Báo cáo & Thống kê điểm
-        public async Task<IActionResult> Reports()
+        public async Task<IActionResult> Reports(int? classRoomId = null)
         {
             var userId = _userManager.GetUserId(User);
 
-            // Lấy tất cả lớp học và bài tập của giảng viên
-            var classes = await _context.ClassRooms
-                .Where(c => c.InstructorId == userId)
-                .ToListAsync();
+            // Lấy tất cả lớp học và bài tập của giảng viên hoặc lớp cụ thể
+            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
+
+            if (classRoomId.HasValue)
+            {
+                classQuery = classQuery.Where(c => c.Id == classRoomId.Value);
+                var selectedClass = await classQuery.FirstOrDefaultAsync();
+                if (selectedClass != null)
+                {
+                    ViewBag.ClassName = selectedClass.Title;
+                    ViewBag.ClassRoomId = classRoomId.Value;
+                }
+            }
+
+            var classes = await classQuery.ToListAsync();
 
             var classIds = classes.Select(c => c.Id).ToList();
 
@@ -454,16 +475,21 @@ namespace CourseManagement.Controllers
         }
 
         // Xuất báo cáo Excel
-        public async Task<IActionResult> ExportToExcel()
+        public async Task<IActionResult> ExportToExcel(int? classRoomId = null)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             var userId = _userManager.GetUserId(User);
 
             // Lấy tất cả dữ liệu giống như Reports action
-            var classes = await _context.ClassRooms
-                .Where(c => c.InstructorId == userId)
-                .ToListAsync();
+            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
+
+            if (classRoomId.HasValue)
+            {
+                classQuery = classQuery.Where(c => c.Id == classRoomId.Value);
+            }
+
+            var classes = await classQuery.ToListAsync();
 
             var classIds = classes.Select(c => c.Id).ToList();
 

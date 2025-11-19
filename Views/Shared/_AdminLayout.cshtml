@@ -1,0 +1,177 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<CourseManagement.Data.ApplicationUser> SignInManager
+@inject UserManager<CourseManagement.Data.ApplicationUser> UserManager
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin Dashboard</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        .admin-sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0;
+        }
+        
+        .admin-sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .admin-sidebar .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-left-color: white;
+        }
+        
+        .admin-sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            border-left-color: #ffd700;
+            font-weight: 500;
+        }
+        
+        .admin-sidebar .nav-link i {
+            margin-right: 10px;
+            font-size: 1.1em;
+        }
+        
+        .admin-header {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .admin-content {
+            padding: 0 30px 30px 30px;
+        }
+        
+        .sidebar-brand {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-brand h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .dropdown-menu {
+            background: rgba(255,255,255,0.95);
+        }
+        
+        .dropdown-item {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 admin-sidebar">
+                <div class="sidebar-brand">
+                    <h4><i class="bi bi-shield-lock-fill"></i> Admin Panel</h4>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")" 
+                           asp-controller="Admin" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Students" || ViewContext.RouteData.Values["Action"]?.ToString() == "CreateStudent" || ViewContext.RouteData.Values["Action"]?.ToString() == "EditStudent" ? "active" : "")" 
+                           asp-controller="Admin" asp-action="Students">
+                            <i class="bi bi-people-fill"></i> Quản lý học viên
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Instructors" || ViewContext.RouteData.Values["Action"]?.ToString() == "CreateInstructor" || ViewContext.RouteData.Values["Action"]?.ToString() == "EditInstructor" ? "active" : "")" 
+                           asp-controller="Admin" asp-action="Instructors">
+                            <i class="bi bi-person-badge-fill"></i> Quản lý giảng viên
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Courses" ? "active" : "")" 
+                           asp-controller="Admin" asp-action="Courses">
+                            <i class="bi bi-book-fill"></i> Quản lý khóa học
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Action"]?.ToString() == "Reports" ? "active" : "")" 
+                           asp-controller="Admin" asp-action="Reports">
+                            <i class="bi bi-bar-chart-fill"></i> Báo cáo & Thống kê
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item mt-auto">
+                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-house-door-fill"></i> Trang chủ
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10">
+                <div class="admin-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">@ViewData["Title"]</h3>
+                    <div class="dropdown">
+                        <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> @User.Identity?.Name
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <form class="px-3" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home")">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="admin-content">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show">
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

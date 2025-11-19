@@ -1,0 +1,91 @@
+@model List<CourseManagement.Models.InstructorStatViewModel>
+@{
+    ViewData["Title"] = "Báo cáo & Thống kê";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="mb-3">
+    <h4><i class="bi bi-bar-chart-fill"></i> Báo cáo & Thống kê theo giảng viên</h4>
+</div>
+
+@if (Model.Any())
+{
+    foreach (var instructor in Model)
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-badge-fill"></i> @instructor.InstructorName
+                        </h5>
+                        <small>@instructor.Email</small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <span class="badge bg-light text-dark me-2">
+                            <i class="bi bi-book"></i> @instructor.CourseCount khóa học
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-people"></i> @instructor.TotalStudents học viên
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (instructor.Courses != null && instructor.Courses.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tên khóa học</th>
+                                    <th class="text-center">Học viên</th>
+                                    <th class="text-center">Bài tập</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var course in instructor.Courses)
+                                {
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-book"></i> @course.ClassName
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success">@course.StudentCount</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">@course.AssignmentCount</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <a asp-controller="Instructor" asp-action="Students" asp-route-classRoomId="@course.ClassId" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-people"></i> Xem học viên
+                                            </a>
+                                            <a asp-controller="Instructor" asp-action="Reports" asp-route-classRoomId="@course.ClassId" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-clipboard-data"></i> Xem báo cáo
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> Giảng viên chưa có khóa học nào
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Chưa có dữ liệu thống kê
+    </div>
+}
