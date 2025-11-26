@@ -39,31 +39,10 @@
                                     <a asp-action="EditInstructor" asp-route-id="@instructor.Id" class="btn btn-sm btn-warning">
                                         <i class="bi bi-pencil"></i> Sửa
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@instructor.Id">
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                        onclick="confirmDeleteInstructor('@instructor.Id', '@instructor.FullName')">
                                         <i class="bi bi-trash"></i> Xóa
                                     </button>
-                                    
-                                    <!-- Delete Confirmation Modal -->
-                                    <div class="modal fade" id="deleteModal-@instructor.Id" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Xác nhận xóa</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    Bạn có chắc chắn muốn xóa giảng viên <strong>@instructor.FullName</strong>?
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                                                    <form asp-action="DeleteInstructor" method="post" class="d-inline">
-                                                        <input type="hidden" name="id" value="@instructor.Id" />
-                                                        <button type="submit" class="btn btn-danger">Xóa</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </td>
                             </tr>
                         }
@@ -79,3 +58,43 @@ else
         <i class="bi bi-info-circle"></i> Chưa có giảng viên nào trong hệ thống.
     </div>
 }
+
+@section Scripts {
+    <script>
+        function confirmDeleteInstructor(instructorId, instructorName) {
+            if (confirm('BẠN CÓ CHẮC CHẮN MUỐN XÓA GIẢNG VIÊN NÀY KHÔNG?\n\n' +
+                'Giảng viên: ' + instructorName + '\n\n' +
+                'CẢNH BÁO: Hành động này sẽ XÓA VĨNH VIỄN:\n' +
+                '- Tài khoản của giảng viên\n' +
+                '- TẤT CẢ các khóa học do giảng viên tạo ra\n' +
+                '- Tất cả bài tập, nội dung, điểm danh trong các khóa học đó\n' +
+                '- Học viên sẽ KHÔNG THỂ truy cập các khóa học này nữa\n\n' +
+                'Hành động này KHÔNG THỂ HOÀN TÁC!')) {
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("DeleteInstructor", "Admin")';
+
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = instructorId;
+                form.appendChild(idInput);
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = token.value;
+                    form.appendChild(tokenInput);
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}
+
+@Html.AntiForgeryToken()

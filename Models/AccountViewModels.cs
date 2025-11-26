@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace CourseManagement.Models
 {
@@ -12,6 +13,23 @@ namespace CourseManagement.Models
 
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
+
+        [Display(Name = "Số điện thoại")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        public string? PhoneNumber { get; set; }
+
+        [Display(Name = "Địa chỉ")]
+        [StringLength(500, ErrorMessage = "Địa chỉ không được vượt quá 500 ký tự")]
+        public string? Address { get; set; }
+
+        [Display(Name = "Giới tính")]
+        public string? Gender { get; set; }
+
+        [Display(Name = "Ảnh đại diện")]
+        public IFormFile? AvatarFile { get; set; }
+
+        // Đường dẫn avatar hiện tại
+        public string? CurrentAvatar { get; set; }
     }
 
     // ViewModel cho đổi mật khẩu

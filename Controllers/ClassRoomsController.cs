@@ -25,6 +25,7 @@ namespace CourseManagement.Controllers
         }
 
         // GET: /ClassRooms/Details/5
+        [Authorize]
         public async Task<IActionResult> Details(int id)
         {
             var c = await _context.ClassRooms

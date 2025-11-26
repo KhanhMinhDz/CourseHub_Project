@@ -16,7 +16,7 @@
 
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-10">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0"><i class="bi bi-person-circle"></i> Quản lý tài khoản</h4>
@@ -30,19 +30,83 @@
                         </div>
                     }
 
-                    <form asp-action="Profile" method="post">
+                    <form asp-action="Profile" method="post" enctype="multipart/form-data">
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                        <div class="mb-3">
-                            <label asp-for="Email" class="form-label">Email (không thể thay đổi)</label>
-                            <input asp-for="Email" class="form-control" readonly disabled />
+                        <div class="row">
+                            <!-- Cột trái - Avatar -->
+                            <div class="col-md-4 text-center mb-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ảnh đại diện</label>
+                                    <div class="avatar-preview mb-3">
+                                        @if (!string.IsNullOrEmpty(Model.CurrentAvatar))
+                                        {
+                                            <img src="@Model.CurrentAvatar" alt="Avatar" class="img-thumbnail rounded-circle" 
+                                                 style="width: 200px; height: 200px; object-fit: cover;" id="avatarPreview" />
+                                        }
+                                        else
+                                        {
+                                            <img src="/images/default-avatar.png" alt="Default Avatar" class="img-thumbnail rounded-circle" 
+                                                 style="width: 200px; height: 200px; object-fit: cover;" id="avatarPreview" 
+                                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2250%22%3ENo Image%3C/text%3E%3C/svg%3E'"/>
+                                        }
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="avatarFile" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-upload"></i> Chọn ảnh mới
+                                        </label>
+                                        <input type="file" asp-for="AvatarFile" class="d-none" id="avatarFile" 
+                                               accept="image/*" onchange="previewAvatar(this)" />
+                                    </div>
+                                    <small class="text-muted">Chấp nhận: JPG, PNG, GIF (tối đa 5MB)</small>
+                                    <span asp-validation-for="AvatarFile" class="text-danger d-block"></span>
+                                </div>
+                            </div>
+
+                            <!-- Cột phải - Thông tin -->
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Email" class="form-label">Email (không thể thay đổi)</label>
+                                        <input asp-for="Email" class="form-control" readonly disabled />
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="FullName" class="form-label">
+                                            Họ tên <span class="text-danger">*</span>
+                                        </label>
+                                        <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên của bạn" />
+                                        <span asp-validation-for="FullName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="PhoneNumber" class="form-label">Số điện thoại</label>
+                                        <input asp-for="PhoneNumber" class="form-control" placeholder="Ví dụ: 0912345678" />
+                                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Gender" class="form-label">Giới tính</label>
+                                        <select asp-for="Gender" class="form-select">
+                                            <option value="">-- Chọn giới tính --</option>
+                                            <option value="Nam">Nam</option>
+                                            <option value="Nữ">Nữ</option>
+                                            <option value="Khác">Khác</option>
+                                        </select>
+                                        <span asp-validation-for="Gender" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="col-12 mb-3">
+                                        <label asp-for="Address" class="form-label">Địa chỉ</label>
+                                        <textarea asp-for="Address" class="form-control" rows="3" 
+                                                  placeholder="Nhập địa chỉ của bạn"></textarea>
+                                        <span asp-validation-for="Address" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label asp-for="FullName" class="form-label">Họ tên</label>
-                            <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên của bạn" />
-                            <span asp-validation-for="FullName" class="text-danger"></span>
-                        </div>
+                        <hr />
 
                         <div class="d-flex gap-2 mb-3">
                             <button type="submit" class="btn btn-primary">
@@ -70,4 +134,16 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    
+    <script>
+        function previewAvatar(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarPreview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
 }

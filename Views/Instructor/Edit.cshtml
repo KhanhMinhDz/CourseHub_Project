@@ -12,6 +12,9 @@
             <i class="bi bi-book me-2"></i>@Model.Title
         </h1>
         <div>
+            <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash-fill me-1"></i>Xóa khóa học
+            </button>
             <a asp-action="Students" asp-route-classRoomId="@Model.Id" class="btn btn-info me-2">
                 <i class="bi bi-people-fill me-1"></i>Quản lý học viên
             </a>
@@ -468,3 +471,48 @@
         }
     }
 </script>
+
+<!-- Modal xác nhận xóa khóa học -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa khóa học
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Cảnh báo:</strong> Hành động này không thể hoàn tác!
+                </div>
+                <p class="mb-3">Bạn có chắc chắn muốn xóa khóa học <strong>"@Model.Title"</strong> không?</p>
+                <p class="mb-2">Khi xóa khóa học, những dữ liệu sau sẽ bị xóa vĩnh viễn:</p>
+                <ul class="text-danger">
+                    <li>Tất cả nội dung lớp học</li>
+                    <li>Tất cả bài tập và câu hỏi</li>
+                    <li>Tất cả bài nộp của học viên</li>
+                    <li>Tất cả điểm danh và phiên điểm danh</li>
+                    <li>Tất cả thông tin ghi danh</li>
+                </ul>
+                <p class="text-muted mt-3">
+                    <i class="bi bi-people-fill me-1"></i>
+                    Học viên đã ghi danh sẽ không còn thấy khóa học này nữa.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Hủy
+                </button>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i>Xóa khóa học
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

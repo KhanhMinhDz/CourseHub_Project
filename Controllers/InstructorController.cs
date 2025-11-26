@@ -684,5 +684,164 @@ namespace CourseManagement.Controllers
             return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
+        // Xóa khóa học
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var cls = await _context.ClassRooms.FindAsync(id);
+            if (cls == null)
+            {
+                TempData["Error"] = "Không tìm thấy khóa học";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var userId = _userManager.GetUserId(User);
+            if (cls.InstructorId != userId)
+            {
+                TempData["Error"] = "Bạn không có quyền xóa khóa học này";
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                // Xóa tất cả dữ liệu liên quan
+
+                // 1. Xóa các bái tập và dữ liệu liên quan
+                var assignments = await _context.Assignments
+                    .Where(a => a.ClassRoomId == id)
+                    .ToListAsync();
+
+                foreach (var assignment in assignments)
+                {
+                    // Xóa câu hỏi của bài tập (nếu có)
+                    var questions = await _context.Questions
+                        .Where(q => q.AssignmentId == assignment.Id)
+                        .ToListAsync();
+                    _context.Questions.RemoveRange(questions);
+
+                    // Xóa các bài nộp
+                    var submissions = await _context.Submissions
+                        .Where(s => s.AssignmentId == assignment.Id)
+                        .ToListAsync();
+                    _context.Submissions.RemoveRange(submissions);
+                }
+
+                _context.Assignments.RemoveRange(assignments);
+
+                // 2. Xóa nội dung lớp học
+                var contentBlocks = await _context.ContentBlocks
+                    .Where(c => c.ClassRoomId == id)
+                    .ToListAsync();
+                _context.ContentBlocks.RemoveRange(contentBlocks);
+
+                // 3. Xóa các phiên điểm danh và bản ghi điểm danh
+                var attendanceSessions = await _context.AttendanceSessions
+                    .Where(s => s.ClassRoomId == id)
+                    .ToListAsync();
+
+                foreach (var session in attendanceSessions)
+                {
+                    var attendanceRecords = await _context.AttendanceRecords
+                        .Where(r => r.AttendanceSessionId == session.Id)
+                        .ToListAsync();
+                    _context.AttendanceRecords.RemoveRange(attendanceRecords);
+                }
+
+                _context.AttendanceSessions.RemoveRange(attendanceSessions);
+
+                // 4. Xóa các ghi danh
+                var enrollments = await _context.Enrollments
+                    .Where(e => e.ClassRoomId == id)
+                    .ToListAsync();
+                _context.Enrollments.RemoveRange(enrollments);
+
+                // 5. Cuối cùng xóa khóa học
+                _context.ClassRooms.Remove(cls);
+
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] = $"Xóa khóa học '{cls.Title}' thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Có lỗi xảy ra khi xóa khóa học: {ex.Message}";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+        }
+
+        // Xóa học viên khỏi khóa học
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveStudent(int classRoomId, string studentId)
+        {
+            var classRoom = await _context.ClassRooms.FindAsync(classRoomId);
+            if (classRoom == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy khóa học" });
+            }
+
+            var userId = _userManager.GetUserId(User);
+            if (classRoom.InstructorId != userId)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền xóa học viên khỏi khóa học này" });
+            }
+
+            try
+            {
+                // Tìm enrollment của học viên
+                var enrollment = await _context.Enrollments
+                    .FirstOrDefaultAsync(e => e.ClassRoomId == classRoomId && e.StudentId == studentId);
+
+                if (enrollment == null)
+                {
+                    return Json(new { success = false, message = "Không tìm thấy thông tin ghi danh" });
+                }
+
+                // Xóa enrollment
+                _context.Enrollments.Remove(enrollment);
+
+                // Xóa các bản ghi điểm danh của học viên trong lớp này
+                var attendanceSessions = await _context.AttendanceSessions
+                    .Where(s => s.ClassRoomId == classRoomId)
+                    .Select(s => s.Id)
+                    .ToListAsync();
+
+                var attendanceRecords = await _context.AttendanceRecords
+                    .Where(r => attendanceSessions.Contains(r.AttendanceSessionId) && r.StudentId == studentId)
+                    .ToListAsync();
+
+                _context.AttendanceRecords.RemoveRange(attendanceRecords);
+
+                // Xóa các bài nộp của học viên trong lớp này
+                var assignments = await _context.Assignments
+                    .Where(a => a.ClassRoomId == classRoomId)
+                    .Select(a => a.Id)
+                    .ToListAsync();
+
+                var submissions = await _context.Submissions
+                    .Where(s => assignments.Contains(s.AssignmentId) && s.StudentId == studentId)
+                    .ToListAsync();
+
+                _context.Submissions.RemoveRange(submissions);
+
+                await _context.SaveChangesAsync();
+
+                var student = await _userManager.FindByIdAsync(studentId);
+                var studentName = student?.FullName ?? student?.UserName ?? "Học viên";
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"Đã xóa {studentName} khỏi khóa học thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Có lỗi xảy ra: {ex.Message}" });
+            }
+        }
+
     }
 }

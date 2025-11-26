@@ -11,11 +11,16 @@ namespace CourseManagement.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IWebHostEnvironment _environment;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+        public AccountController(
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _environment = environment;
         }
 
         // GET: Account/Profile
@@ -29,7 +34,11 @@ namespace CourseManagement.Controllers
             var model = new EditProfileViewModel
             {
                 FullName = user.FullName ?? "",
-                Email = user.Email ?? ""
+                Email = user.Email ?? "",
+                PhoneNumber = user.PhoneNumber,
+                Address = user.Address,
+                Gender = user.Gender,
+                CurrentAvatar = user.Avatar
             };
 
             return View(model);
@@ -47,7 +56,57 @@ namespace CourseManagement.Controllers
             if (user == null)
                 return NotFound();
 
+            // Cập nhật thông tin cơ bản
             user.FullName = model.FullName;
+            user.PhoneNumber = model.PhoneNumber;
+            user.Address = model.Address;
+            user.Gender = model.Gender;
+
+            // Xử lý upload avatar
+            if (model.AvatarFile != null && model.AvatarFile.Length > 0)
+            {
+                // Kiểm tra phần mở rộng file
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                var extension = Path.GetExtension(model.AvatarFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    ModelState.AddModelError("AvatarFile", "Chỉ chấp nhận file ảnh (.jpg, .jpeg, .png, .gif)");
+                    return View(model);
+                }
+
+                // Kiểm tra kích thước file (giới hạn 5MB)
+                if (model.AvatarFile.Length > 5 * 1024 * 1024)
+                {
+                    ModelState.AddModelError("AvatarFile", "Kích thước file không được vượt quá 5MB");
+                    return View(model);
+                }
+
+                // Tạo thư mục avatars nếu chưa tồn tại
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
+                Directory.CreateDirectory(uploadsFolder);
+
+                // Xóa avatar cũ nếu có
+                if (!string.IsNullOrEmpty(user.Avatar))
+                {
+                    var oldAvatarPath = Path.Combine(_environment.WebRootPath, user.Avatar.TrimStart('/'));
+                    if (System.IO.File.Exists(oldAvatarPath))
+                    {
+                        System.IO.File.Delete(oldAvatarPath);
+                    }
+                }
+
+                // Lưu file mới
+                var fileName = $"{user.Id}_{Guid.NewGuid()}{extension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.AvatarFile.CopyToAsync(stream);
+                }
+
+                user.Avatar = $"/uploads/avatars/{fileName}";
+            }
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)

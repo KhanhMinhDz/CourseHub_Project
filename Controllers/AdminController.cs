@@ -307,22 +307,86 @@ namespace CourseManagement.Controllers
             if (user == null)
                 return NotFound();
 
-            // Kiểm tra xem giảng viên có lớp học nào không
-            var hasCourses = await _context.ClassRooms.AnyAsync(c => c.InstructorId == id);
-            if (hasCourses)
+            try
             {
-                TempData["Error"] = "Không thể xóa giảng viên đang có lớp học!";
-                return RedirectToAction(nameof(Instructors));
-            }
+                // Lấy tất cả các lớp học của giảng viên
+                var classRooms = await _context.ClassRooms
+                    .Where(c => c.InstructorId == id)
+                    .ToListAsync();
 
-            var result = await _userManager.DeleteAsync(user);
-            if (result.Succeeded)
-            {
-                TempData["Success"] = "Xóa tài khoản thành công!";
+                // Xóa tất cả dữ liệu liên quan đến từng lớp học
+                foreach (var classRoom in classRooms)
+                {
+                    // Xóa các câu hỏi trong assignments
+                    var assignments = await _context.Assignments
+                        .Where(a => a.ClassRoomId == classRoom.Id)
+                        .ToListAsync();
+
+                    var assignmentIds = assignments.Select(a => a.Id).ToList();
+
+                    foreach (var assignment in assignments)
+                    {
+                        var questions = await _context.Questions
+                            .Where(q => q.AssignmentId == assignment.Id)
+                            .ToListAsync();
+                        _context.Questions.RemoveRange(questions);
+                    }
+
+                    // Xóa submissions thông qua AssignmentId
+                    var submissions = await _context.Submissions
+                        .Where(s => assignmentIds.Contains(s.AssignmentId))
+                        .ToListAsync();
+                    _context.Submissions.RemoveRange(submissions);
+
+                    // Xóa assignments
+                    _context.Assignments.RemoveRange(assignments);
+
+                    // Xóa content blocks
+                    var contentBlocks = await _context.ContentBlocks
+                        .Where(cb => cb.ClassRoomId == classRoom.Id)
+                        .ToListAsync();
+                    _context.ContentBlocks.RemoveRange(contentBlocks);
+
+                    // Xóa attendance sessions và records
+                    var attendanceSessions = await _context.AttendanceSessions
+                        .Where(asn => asn.ClassRoomId == classRoom.Id)
+                        .ToListAsync();
+
+                    var sessionIds = attendanceSessions.Select(s => s.Id).ToList();
+
+                    var attendanceRecords = await _context.AttendanceRecords
+                        .Where(ar => sessionIds.Contains(ar.AttendanceSessionId))
+                        .ToListAsync();
+                    _context.AttendanceRecords.RemoveRange(attendanceRecords);
+                    _context.AttendanceSessions.RemoveRange(attendanceSessions);
+
+                    // Xóa enrollments
+                    var enrollments = await _context.Enrollments
+                        .Where(e => e.ClassRoomId == classRoom.Id)
+                        .ToListAsync();
+                    _context.Enrollments.RemoveRange(enrollments);
+                }
+
+                // Xóa tất cả các lớp học
+                _context.ClassRooms.RemoveRange(classRooms);
+
+                // Lưu thay đổi database
+                await _context.SaveChangesAsync();
+
+                // Xóa tài khoản giảng viên
+                var result = await _userManager.DeleteAsync(user);
+                if (result.Succeeded)
+                {
+                    TempData["Success"] = $"Đã xóa giảng viên {user.FullName} và {classRooms.Count} khóa học thành công!";
+                }
+                else
+                {
+                    TempData["Error"] = "Không thể xóa tài khoản giảng viên!";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                TempData["Error"] = "Không thể xóa tài khoản!";
+                TempData["Error"] = $"Có lỗi xảy ra: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Instructors));

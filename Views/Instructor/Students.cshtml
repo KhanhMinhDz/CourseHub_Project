@@ -66,6 +66,12 @@
                         <th rowspan="2" class="align-middle" style="min-width: 200px;">
                             <i class="bi bi-envelope-fill me-1"></i>Email
                         </th>
+                        @if (ViewBag.ClassRoomId != null)
+                        {
+                            <th rowspan="2" class="align-middle text-center" style="width: 100px;">
+                                <i class="bi bi-trash-fill me-1"></i>Xóa
+                            </th>
+                        }
                         @if (sessions.Any())
                         {
                             <th colspan="@sessions.Count" class="text-center bg-success bg-opacity-10">
@@ -109,6 +115,16 @@
                                         <i class="bi bi-envelope me-1"></i>@student.Email
                                     </a>
                                 </td>
+                                @if (ViewBag.ClassRoomId != null)
+                                {
+                                    <td class="text-center">
+                                        <button class="btn btn-danger btn-sm"
+                                            onclick="removeStudent('@student.StudentId', '@student.StudentName', @ViewBag.ClassRoomId)"
+                                            title="Xóa học viên khỏi khóa học">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </td>
+                                }
                                 @foreach (var session in sessions)
                                 {
                                     var status = student.AttendanceStatuses.FirstOrDefault(s => s.SessionId == session.Id);
@@ -217,3 +233,40 @@ else
         overflow-y: auto;
     }
 </style>
+
+@section Scripts {
+    <script>
+        function removeStudent(studentId, studentName, classRoomId) {
+            if (confirm('Bạn có chắc chắn muốn xóa học viên "' + studentName + '" khỏi lớp học này không?\n\nHành động này sẽ xóa:\n- Thông tin ghi danh\n- Tất cả bài nộp của học viên\n- Tất cả bản ghi điểm danh\n\nHọc viên có thể ghi danh lại nếu muốn tham gia khóa học.')) {
+                const formData = new FormData();
+                formData.append('classRoomId', classRoomId);
+                formData.append('studentId', studentId);
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) {
+                    formData.append('__RequestVerificationToken', token.value);
+                }
+
+                fetch('@Url.Action("RemoveStudent", "Instructor")', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Lỗi: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Có lỗi xảy ra khi xóa học viên');
+                        console.error('Error:', error);
+                    });
+            }
+        }
+    </script>
+}
+
+@Html.AntiForgeryToken()
