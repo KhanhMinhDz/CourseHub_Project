@@ -4,23 +4,61 @@
     ViewData["Title"] = "Tạo bài tập";
 }
 
-<h1>Tạo bài tập</h1>
-<form asp-action="Create" method="post">
-    <input type="hidden" asp-for="ClassRoomId" />
-    <div>
-        <label asp-for="Title"></label>
-        <input asp-for="Title" />
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Tạo bài tập mới
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" id="createAssignmentForm">
+                        <input type="hidden" asp-for="ClassRoomId" />
+
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label fw-bold">
+                                <i class="bi bi-pencil me-1"></i>Tiêu đề bài tập
+                            </label>
+                            <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề bài tập" required />
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">
+                                <i class="bi bi-file-text me-1"></i>Mô tả / Nội dung
+                            </label>
+                            <textarea id="assignmentDescriptionEditor" asp-for="Description"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DueDate" class="form-label fw-bold">
+                                <i class="bi bi-calendar-event me-1"></i>Hạn nộp bài (Deadline)
+                            </label>
+                            <input asp-for="DueDate" type="datetime-local" class="form-control" id="dueDateInput" />
+                            <span asp-validation-for="DueDate" class="text-danger" id="dueDateError"></span>
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Để trống nếu không giới hạn thời gian nộp bài
+                            </small>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a asp-action="Index" asp-route-classId="@Model.ClassRoomId"
+                                class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x-circle me-1"></i>Hủy
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Tạo bài tập
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-    <div>
-        <label asp-for="Description"></label>
-        <textarea id="assignmentDescriptionEditor" asp-for="Description"></textarea>
-    </div>
-    <div>
-        <label asp-for="DueDate"></label>
-        <input asp-for="DueDate" type="datetime-local" />
-    </div>
-    <button type="submit">Tạo</button>
-</form>
+</div>
 
 @section Scripts {
     <script>
@@ -31,5 +69,52 @@
             filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
             height: 250
         });
+
+        // Validation cho deadline
+        document.getElementById('createAssignmentForm').addEventListener('submit', function (e) {
+            const dueDateInput = document.getElementById('dueDateInput');
+            const dueDateError = document.getElementById('dueDateError');
+
+            if (dueDateInput.value) {
+                const selectedDate = new Date(dueDateInput.value);
+                const now = new Date();
+
+                if (selectedDate < now) {
+                    e.preventDefault();
+                    dueDateError.textContent = 'Hạn nộp bài không được trong quá khứ. Vui lòng chọn thời gian trong tương lai.';
+                    dueDateInput.classList.add('is-invalid');
+                    dueDateInput.focus();
+                    return false;
+                } else {
+                    dueDateError.textContent = '';
+                    dueDateInput.classList.remove('is-invalid');
+                }
+            }
+        });
+
+        // Clear error khi người dùng thay đổi giá trị
+        document.getElementById('dueDateInput').addEventListener('change', function () {
+            const dueDateError = document.getElementById('dueDateError');
+            const selectedDate = new Date(this.value);
+            const now = new Date();
+
+            if (this.value && selectedDate < now) {
+                dueDateError.textContent = 'Hạn nộp bài không được trong quá khứ. Vui lòng chọn thời gian trong tương lai.';
+                this.classList.add('is-invalid');
+            } else {
+                dueDateError.textContent = '';
+                this.classList.remove('is-invalid');
+            }
+        });
     </script>
 }
+
+<style>
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .is-invalid {
+        border-color: #dc3545 !important;
+    }
+</style>

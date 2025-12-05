@@ -3,6 +3,7 @@ namespace CourseManagement.Models
     public class QuizResultViewModel
     {
         public int AssignmentId { get; set; }
+        public int ClassRoomId { get; set; }
         public string AssignmentTitle { get; set; } = string.Empty;
         public List<QuestionResult> QuestionResults { get; set; } = new();
         public int TotalQuestions { get; set; }

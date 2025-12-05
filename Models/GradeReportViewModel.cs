@@ -25,4 +25,19 @@ namespace CourseManagement.Models
         public List<StudentGradeReportViewModel> Students { get; set; } = new();
         public List<Assignment> Assignments { get; set; } = new();
     }
+
+    // ViewModel cho báo cáo nhóm theo lớp
+    public class ClassGradeReportViewModel
+    {
+        public int ClassId { get; set; }
+        public string ClassName { get; set; } = string.Empty;
+        public List<StudentGradeReportViewModel> Students { get; set; } = new();
+        public List<Assignment> Assignments { get; set; } = new();
+        public List<AttendanceSession> AttendanceSessions { get; set; } = new();
+    }
+
+    public class ReportsByClassViewModel
+    {
+        public List<ClassGradeReportViewModel> ClassReports { get; set; } = new();
+    }
 }

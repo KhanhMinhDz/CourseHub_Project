@@ -9,7 +9,7 @@ using System.Drawing;
 
 namespace CourseManagement.Controllers
 {
-    [Authorize(Roles = "Instructor")]
+    [Authorize(Roles = "Instructor,Admin")]
     public class InstructorController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -21,6 +21,7 @@ namespace CourseManagement.Controllers
             _userManager = userManager;
         }
 
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
@@ -28,6 +29,7 @@ namespace CourseManagement.Controllers
             return View(classes);
         }
 
+        [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> Edit(int id)
         {
             var cls = await _context.ClassRooms.FindAsync(id);
@@ -88,9 +90,11 @@ namespace CourseManagement.Controllers
         public async Task<IActionResult> Students(int? classRoomId = null)
         {
             var userId = _userManager.GetUserId(User);
+            var isAdmin = User.IsInRole("Admin");
 
             // Lấy tất cả lớp học của giảng viên hoặc lớp cụ thể
-            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
+            // Admin có thể xem tất cả lớp
+            var classQuery = isAdmin ? _context.ClassRooms : _context.ClassRooms.Where(c => c.InstructorId == userId);
 
             if (classRoomId.HasValue)
             {
@@ -168,24 +172,32 @@ namespace CourseManagement.Controllers
         // Báo cáo & Thống kê điểm
         public async Task<IActionResult> Reports(int? classRoomId = null)
         {
-            var userId = _userManager.GetUserId(User);
+            var userId = _userManager.GetUserId(User) ?? "";
+            var isAdmin = User.IsInRole("Admin");
 
-            // Lấy tất cả lớp học và bài tập của giảng viên hoặc lớp cụ thể
-            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
-
+            // Nếu có classRoomId - hiển thị 1 lớp như cũ (cho chức năng chấm điểm trong lớp)
             if (classRoomId.HasValue)
             {
-                classQuery = classQuery.Where(c => c.Id == classRoomId.Value);
-                var selectedClass = await classQuery.FirstOrDefaultAsync();
-                if (selectedClass != null)
-                {
-                    ViewBag.ClassName = selectedClass.Title;
-                    ViewBag.ClassRoomId = classRoomId.Value;
-                }
+                return await ShowSingleClassReport(classRoomId.Value, userId, isAdmin);
+            }
+
+            // Không có classRoomId - hiển thị tất cả lớp (cho Báo cáo & Thống kê)
+            return await ShowAllClassesReport(userId, isAdmin);
+        }
+
+        // Action phụ để hiển thị báo cáo 1 lớp (chấm điểm)
+        private async Task<IActionResult> ShowSingleClassReport(int classRoomId, string userId, bool isAdmin = false)
+        {
+            var classQuery = isAdmin ? _context.ClassRooms.Where(c => c.Id == classRoomId) : _context.ClassRooms.Where(c => c.InstructorId == userId && c.Id == classRoomId);
+            var selectedClass = await classQuery.FirstOrDefaultAsync();
+
+            if (selectedClass != null)
+            {
+                ViewBag.ClassName = selectedClass.Title;
+                ViewBag.ClassRoomId = classRoomId;
             }
 
             var classes = await classQuery.ToListAsync();
-
             var classIds = classes.Select(c => c.Id).ToList();
 
             // Lấy tất cả phiên điểm danh
@@ -225,6 +237,91 @@ namespace CourseManagement.Controllers
             var quizAssignmentIds = questionsGrouped.Where(q => q.HasQuestions).Select(q => q.AssignmentId).ToList();
 
             // Tạo danh sách học viên với điểm
+            var studentReports = await BuildStudentReports(studentIds, allSessions, assignments, submissions, quizAssignmentIds);
+
+            var viewModel = new GradeReportViewModel
+            {
+                Students = studentReports.OrderBy(s => s.StudentName).ToList(),
+                Assignments = assignments
+            };
+
+            return View(viewModel);
+        }
+
+        // Action phụ để hiển thị báo cáo tất cả các lớp
+        private async Task<IActionResult> ShowAllClassesReport(string userId, bool isAdmin = false)
+        {
+            var classes = isAdmin
+                ? await _context.ClassRooms.OrderBy(c => c.Title).ToListAsync()
+                : await _context.ClassRooms.Where(c => c.InstructorId == userId).OrderBy(c => c.Title).ToListAsync();
+
+            var classReports = new List<ClassGradeReportViewModel>();
+
+            foreach (var classRoom in classes)
+            {
+                // Lấy phiên điểm danh của lớp
+                var sessions = await _context.AttendanceSessions
+                    .Where(s => s.ClassRoomId == classRoom.Id)
+                    .OrderBy(s => s.CreatedAt)
+                    .ToListAsync();
+
+                // Lấy bài tập của lớp
+                var assignments = await _context.Assignments
+                    .Where(a => a.ClassRoomId == classRoom.Id)
+                    .OrderBy(a => a.CreatedAt)
+                    .ToListAsync();
+
+                // Lấy học viên đã ghi danh
+                var enrollments = await _context.Enrollments
+                    .Where(e => e.ClassRoomId == classRoom.Id)
+                    .ToListAsync();
+
+                var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+
+                // Lấy submissions
+                var assignmentIds = assignments.Select(a => a.Id).ToList();
+                var submissions = await _context.Submissions
+                    .Where(s => assignmentIds.Contains(s.AssignmentId))
+                    .ToListAsync();
+
+                // Xác định quiz assignments
+                var questionsGrouped = await _context.Questions
+                    .Where(q => assignmentIds.Contains(q.AssignmentId))
+                    .GroupBy(q => q.AssignmentId)
+                    .Select(g => new { AssignmentId = g.Key, HasQuestions = g.Any() })
+                    .ToListAsync();
+
+                var quizAssignmentIds = questionsGrouped.Where(q => q.HasQuestions).Select(q => q.AssignmentId).ToList();
+
+                // Tạo danh sách học viên với điểm
+                var studentReports = await BuildStudentReports(studentIds, sessions, assignments, submissions, quizAssignmentIds);
+
+                classReports.Add(new ClassGradeReportViewModel
+                {
+                    ClassId = classRoom.Id,
+                    ClassName = classRoom.Title,
+                    Students = studentReports.OrderBy(s => s.StudentName).ToList(),
+                    Assignments = assignments,
+                    AttendanceSessions = sessions
+                });
+            }
+
+            var viewModel = new ReportsByClassViewModel
+            {
+                ClassReports = classReports
+            };
+
+            return View("ReportsByClass", viewModel);
+        }
+
+        // Helper method để tạo danh sách StudentGradeReportViewModel
+        private async Task<List<StudentGradeReportViewModel>> BuildStudentReports(
+            List<string> studentIds,
+            List<AttendanceSession> sessions,
+            List<Assignment> assignments,
+            List<Submission> submissions,
+            List<int> quizAssignmentIds)
+        {
             var studentReports = new List<StudentGradeReportViewModel>();
 
             foreach (var studentId in studentIds)
@@ -234,12 +331,12 @@ namespace CourseManagement.Controllers
 
                 // Lấy thông tin điểm danh của học viên
                 var studentRecords = await _context.AttendanceRecords
-                    .Where(r => allSessions.Select(s => s.Id).Contains(r.AttendanceSessionId)
+                    .Where(r => sessions.Select(s => s.Id).Contains(r.AttendanceSessionId)
                              && r.StudentId == user.Id)
                     .ToListAsync();
 
                 var attendanceStatuses = new List<AttendanceStatus>();
-                foreach (var session in allSessions)
+                foreach (var session in sessions)
                 {
                     var record = studentRecords.FirstOrDefault(r => r.AttendanceSessionId == session.Id);
                     attendanceStatuses.Add(new AttendanceStatus
@@ -290,13 +387,7 @@ namespace CourseManagement.Controllers
                 studentReports.Add(studentReport);
             }
 
-            var viewModel = new GradeReportViewModel
-            {
-                Students = studentReports.OrderBy(s => s.StudentName).ToList(),
-                Assignments = assignments
-            };
-
-            return View(viewModel);
+            return studentReports;
         }
 
         // Cập nhật điểm cho bài tập tự luận
@@ -343,7 +434,7 @@ namespace CourseManagement.Controllers
 
         // Tạo phiên điểm danh mới
         [HttpPost]
-        public async Task<IActionResult> CreateAttendanceSession(int classRoomId, int durationMinutes)
+        public async Task<IActionResult> CreateAttendanceSession(int classRoomId, int durationMinutes, string password)
         {
             var userId = _userManager.GetUserId(User);
 
@@ -352,13 +443,18 @@ namespace CourseManagement.Controllers
             if (classRoom == null || classRoom.InstructorId != userId)
                 return Json(new { success = false, message = "Không có quyền" });
 
+            // Kiểm tra mật khẩu
+            if (string.IsNullOrWhiteSpace(password))
+                return Json(new { success = false, message = "Vui lòng nhập mật khẩu điểm danh" });
+
             // Tạo phiên điểm danh
             var session = new AttendanceSession
             {
                 ClassRoomId = classRoomId,
                 CreatedAt = DateTime.Now,
                 CloseAt = DateTime.Now.AddMinutes(durationMinutes),
-                IsActive = true
+                IsActive = true,
+                Password = password.Trim()
             };
 
             _context.AttendanceSessions.Add(session);
@@ -479,46 +575,98 @@ namespace CourseManagement.Controllers
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            var userId = _userManager.GetUserId(User);
+            var userId = _userManager.GetUserId(User) ?? "";
+            var isAdmin = User.IsInRole("Admin");
 
-            // Lấy tất cả dữ liệu giống như Reports action
-            var classQuery = _context.ClassRooms.Where(c => c.InstructorId == userId);
+            using var package = new ExcelPackage();
 
+            // Nếu có classRoomId - xuất 1 lớp cụ thể (chức năng cũ)
             if (classRoomId.HasValue)
             {
-                classQuery = classQuery.Where(c => c.Id == classRoomId.Value);
+                await ExportSingleClass(package, userId, classRoomId.Value, isAdmin);
+            }
+            else
+            {
+                // Xuất tất cả các lớp - mỗi lớp 1 sheet
+                await ExportAllClasses(package, userId, isAdmin);
             }
 
+            // Return file
+            var stream = new MemoryStream();
+            package.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"BaoCaoDiem_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        // Helper method để xuất 1 lớp cụ thể
+        private async Task ExportSingleClass(ExcelPackage package, string userId, int classRoomId, bool isAdmin = false)
+        {
+            var classQuery = isAdmin
+                ? _context.ClassRooms.Where(c => c.Id == classRoomId)
+                : _context.ClassRooms.Where(c => c.InstructorId == userId && c.Id == classRoomId);
             var classes = await classQuery.ToListAsync();
 
-            var classIds = classes.Select(c => c.Id).ToList();
+            if (!classes.Any()) return;
+
+            var classRoom = classes.First();
+            await ExportClassToSheet(package, classRoom, classRoom.Title);
+        }
+
+        // Helper method để xuất tất cả các lớp
+        private async Task ExportAllClasses(ExcelPackage package, string userId, bool isAdmin = false)
+        {
+            var classes = isAdmin
+                ? await _context.ClassRooms.OrderBy(c => c.Title).ToListAsync()
+                : await _context.ClassRooms.Where(c => c.InstructorId == userId).OrderBy(c => c.Title).ToListAsync();
+
+            foreach (var classRoom in classes)
+            {
+                // Tạo tên sheet hợp lệ (Excel giới hạn 31 ký tự)
+                var sheetName = classRoom.Title.Length > 31
+                    ? classRoom.Title.Substring(0, 31)
+                    : classRoom.Title;
+
+                // Thay thế các ký tự không hợp lệ
+                sheetName = sheetName.Replace(":", "").Replace("/", "-").Replace("\\", "-")
+                    .Replace("?", "").Replace("*", "").Replace("[", "").Replace("]", "");
+
+                await ExportClassToSheet(package, classRoom, sheetName);
+            }
+        }
+
+        // Helper method để xuất 1 lớp vào 1 sheet
+        private async Task ExportClassToSheet(ExcelPackage package, ClassRoom classRoom, string sheetName)
+        {
+            var worksheet = package.Workbook.Worksheets.Add(sheetName);
 
             // Lấy phiên điểm danh
             var allSessions = await _context.AttendanceSessions
-                .Where(s => classIds.Contains(s.ClassRoomId))
+                .Where(s => s.ClassRoomId == classRoom.Id)
                 .OrderBy(s => s.CreatedAt)
                 .ToListAsync();
 
             // Lấy bài tập
             var assignments = await _context.Assignments
-                .Where(a => classIds.Contains(a.ClassRoomId))
+                .Where(a => a.ClassRoomId == classRoom.Id)
                 .OrderBy(a => a.CreatedAt)
                 .ToListAsync();
 
             // Lấy học viên
             var enrollments = await _context.Enrollments
-                .Where(e => classIds.Contains(e.ClassRoomId))
+                .Where(e => e.ClassRoomId == classRoom.Id)
                 .ToListAsync();
 
             var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
 
             // Lấy submissions
+            var assignmentIds = assignments.Select(a => a.Id).ToList();
             var submissions = await _context.Submissions
-                .Where(s => assignments.Select(a => a.Id).Contains(s.AssignmentId))
+                .Where(s => assignmentIds.Contains(s.AssignmentId))
                 .ToListAsync();
 
             // Xác định quiz assignments
-            var assignmentIds = assignments.Select(a => a.Id).ToList();
             var questionsGrouped = await _context.Questions
                 .Where(q => assignmentIds.Contains(q.AssignmentId))
                 .GroupBy(q => q.AssignmentId)
@@ -526,10 +674,6 @@ namespace CourseManagement.Controllers
                 .ToListAsync();
 
             var quizAssignmentIds = questionsGrouped.Where(q => q.HasQuestions).Select(q => q.AssignmentId).ToList();
-
-            // Tạo Excel
-            using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add("Báo cáo điểm");
 
             // Header row 1
             int col = 1;
@@ -645,43 +789,47 @@ namespace CourseManagement.Controllers
                 row++;
             }
 
-            // Styling
-            using (var range = worksheet.Cells[1, 1, 2, col])
+            // Styling nếu có dữ liệu
+            if (row > 3)
             {
-                range.Style.Font.Bold = true;
-                range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(Color.LightBlue);
-                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-                range.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                // Header styling
+                using (var range = worksheet.Cells[1, 1, 2, col])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.LightBlue);
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                    range.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                }
+
+                // Auto fit columns
+                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+                // Borders
+                using (var range = worksheet.Cells[1, 1, row - 1, col])
+                {
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                }
+
+                // Center align all cells
+                using (var range = worksheet.Cells[1, 1, row - 1, col])
+                {
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                }
             }
-
-            // Auto fit columns
-            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-            // Borders
-            using (var range = worksheet.Cells[1, 1, row - 1, col])
+            else
             {
-                range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                // Không có học viên - hiển thị thông báo
+                worksheet.Cells[3, 1].Value = "Chưa có học viên nào ghi danh vào lớp này";
+                worksheet.Cells[3, 1, 3, col].Merge = true;
+                worksheet.Cells[3, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                worksheet.Cells[3, 1].Style.Font.Italic = true;
             }
-
-            // Center align all cells
-            using (var range = worksheet.Cells[1, 1, row - 1, col])
-            {
-                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-            }
-
-            // Return file
-            var stream = new MemoryStream();
-            package.SaveAs(stream);
-            stream.Position = 0;
-
-            var fileName = $"BaoCaoDiem_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         // Xóa khóa học

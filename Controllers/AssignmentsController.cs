@@ -39,6 +39,12 @@ namespace CourseManagement.Controllers
         [Authorize(Roles = "Instructor")]
         public async Task<IActionResult> Create(Assignment model)
         {
+            // Kiểm tra deadline không được trong quá khứ
+            if (model.DueDate.HasValue && model.DueDate.Value < DateTime.Now)
+            {
+                ModelState.AddModelError("DueDate", "Hạn nộp bài không được trong quá khứ. Vui lòng chọn thời gian trong tương lai.");
+            }
+
             if (!ModelState.IsValid) return View(model);
             // verify instructor owns the class
             var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -82,6 +88,13 @@ namespace CourseManagement.Controllers
             var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User?.IsInRole("Admin") ?? false;
             if (cls != null && cls.InstructorId != null && cls.InstructorId != userId && !isAdmin) return Forbid();
+
+            // Kiểm tra deadline không được trong quá khứ
+            if (dueDate.HasValue && dueDate.Value < DateTime.Now)
+            {
+                TempData["ErrorMessage"] = "Hạn nộp bài không được trong quá khứ. Vui lòng chọn thời gian trong tương lai.";
+                return RedirectToAction(nameof(Details), new { id = a.Id });
+            }
 
             if (!string.IsNullOrEmpty(title)) a.Title = title;
             a.Description = description;
@@ -444,6 +457,7 @@ namespace CourseManagement.Controllers
             var viewModel = new QuizResultViewModel
             {
                 AssignmentId = assignmentId,
+                ClassRoomId = assignment.ClassRoomId,
                 AssignmentTitle = assignment.Title,
                 QuestionResults = questionResults,
                 TotalQuestions = questions.Count,

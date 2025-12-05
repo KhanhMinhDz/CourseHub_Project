@@ -48,12 +48,18 @@
                                     <span class="badge bg-info">@course.AssignmentCount</span>
                                 </td>
                                 <td class="text-end">
-                                    <a asp-controller="Instructor" asp-action="Students" asp-route-classRoomId="@course.ClassId" class="btn btn-sm btn-primary">
+                                    <a asp-controller="Instructor" asp-action="Students" asp-route-classRoomId="@course.ClassId"
+                                        class="btn btn-sm btn-primary">
                                         <i class="bi bi-people"></i> Học viên
                                     </a>
-                                    <a asp-controller="Instructor" asp-action="Reports" asp-route-classRoomId="@course.ClassId" class="btn btn-sm btn-info">
+                                    <a asp-controller="Instructor" asp-action="Reports" asp-route-classRoomId="@course.ClassId"
+                                        class="btn btn-sm btn-info">
                                         <i class="bi bi-bar-chart"></i> Báo cáo
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal-@course.ClassId">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
                                 </td>
                             </tr>
                         }
@@ -62,6 +68,55 @@
             </div>
         </div>
     </div>
+
+    @* Modal xác nhận xóa cho mỗi khóa học *@
+    @foreach (var course in Model)
+    {
+        <div class="modal fade" id="deleteModal-@course.ClassId" tabindex="-1"
+            aria-labelledby="deleteModalLabel-@course.ClassId" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="deleteModalLabel-@course.ClassId">
+                            <i class="bi bi-exclamation-triangle"></i> Cảnh báo
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            <strong>Bạn có chắc chắn muốn xóa khóa học "@course.ClassName" không?</strong>
+                        </p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-circle"></i>
+                            <strong>Lưu ý:</strong> Nếu xóa khóa học này, tất cả dữ liệu liên quan sẽ bị mất vĩnh viễn, bao gồm:
+                            <ul class="mt-2 mb-0">
+                                <li>Danh sách học viên (@course.StudentCount học viên)</li>
+                                <li>Bài tập và bài nộp (@course.AssignmentCount bài tập)</li>
+                                <li>Điểm danh và nội dung khóa học</li>
+                                <li>Giảng viên và Admin sẽ không thể nhìn thấy khóa học này nữa</li>
+                            </ul>
+                        </div>
+                        <p class="text-danger mb-0">
+                            <strong>Hành động này không thể hoàn tác!</strong>
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Quay lại
+                        </button>
+                        <form asp-action="DeleteCourse" asp-controller="Admin" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@course.ClassId" />
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Tiếp tục xóa
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 else
 {

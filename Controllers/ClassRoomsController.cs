@@ -78,7 +78,7 @@ namespace CourseManagement.Controllers
         // Học viên điểm danh
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> MarkAttendance(int sessionId)
+        public async Task<IActionResult> MarkAttendance(int sessionId, string password)
         {
             var userId = _userManager.GetUserId(User);
 
@@ -89,6 +89,13 @@ namespace CourseManagement.Controllers
             // Kiểm tra phiên còn mở không
             if (!session.IsActive || DateTime.Now > session.CloseAt)
                 return Json(new { success = false, message = "Phiên điểm danh đã đóng" });
+
+            // Kiểm tra mật khẩu
+            if (string.IsNullOrWhiteSpace(password))
+                return Json(new { success = false, message = "Vui lòng nhập mật khẩu điểm danh" });
+
+            if (password.Trim() != session.Password)
+                return Json(new { success = false, message = "Mật khẩu không chính xác" });
 
             // Kiểm tra học viên có trong lớp không
             var isEnrolled = await _context.Enrollments

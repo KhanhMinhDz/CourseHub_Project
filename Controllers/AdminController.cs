@@ -429,6 +429,65 @@ namespace CourseManagement.Controllers
             return RedirectToAction("Students", "Instructor", new { classRoomId = id });
         }
 
+        // Xóa khóa học
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            var course = await _context.ClassRooms.FindAsync(id);
+            if (course == null)
+            {
+                TempData["Error"] = "Không tìm thấy khóa học!";
+                return RedirectToAction(nameof(Courses));
+            }
+
+            try
+            {
+                // Xóa tất cả dữ liệu liên quan
+                // 1. Xóa submissions
+                var assignments = await _context.Assignments.Where(a => a.ClassRoomId == id).ToListAsync();
+                foreach (var assignment in assignments)
+                {
+                    var submissions = await _context.Submissions.Where(s => s.AssignmentId == assignment.Id).ToListAsync();
+                    _context.Submissions.RemoveRange(submissions);
+                }
+
+                // 2. Xóa assignments
+                _context.Assignments.RemoveRange(assignments);
+
+                // 3. Xóa attendance records
+                var attendanceSessions = await _context.AttendanceSessions.Where(s => s.ClassRoomId == id).ToListAsync();
+                foreach (var session in attendanceSessions)
+                {
+                    var records = await _context.AttendanceRecords.Where(r => r.AttendanceSessionId == session.Id).ToListAsync();
+                    _context.AttendanceRecords.RemoveRange(records);
+                }
+
+                // 4. Xóa attendance sessions
+                _context.AttendanceSessions.RemoveRange(attendanceSessions);
+
+                // 5. Xóa enrollments
+                var enrollments = await _context.Enrollments.Where(e => e.ClassRoomId == id).ToListAsync();
+                _context.Enrollments.RemoveRange(enrollments);
+
+                // 6. Xóa content blocks
+                var contentBlocks = await _context.ContentBlocks.Where(c => c.ClassRoomId == id).ToListAsync();
+                _context.ContentBlocks.RemoveRange(contentBlocks);
+
+                // 7. Xóa khóa học
+                _context.ClassRooms.Remove(course);
+
+                await _context.SaveChangesAsync();
+                TempData["Success"] = $"Đã xóa khóa học '{course.Title}' thành công!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi xóa khóa học: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Courses));
+        }
+
         // === BÁO CÁO & THỐNG KÊ ===
         public async Task<IActionResult> Reports()
         {

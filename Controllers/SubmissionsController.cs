@@ -135,5 +135,59 @@ namespace CourseManagement.Controllers
                 return RedirectToAction("Create", new { assignmentId });
             }
         }
+
+        // DELETE: Xóa bài nộp (cho phép học viên xóa bài nộp của chính mình)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id, int assignmentId)
+        {
+            var userId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var isInstructor = User?.IsInRole("Instructor") ?? false;
+
+            var submission = await _context.Submissions.FindAsync(id);
+
+            if (submission == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy bài nộp.";
+                return RedirectToAction("Index", new { assignmentId });
+            }
+
+            // Kiểm tra quyền: học viên chỉ được xóa bài nộp của mình, giảng viên có thể xóa bất kỳ
+            if (!isInstructor && submission.StudentId != userId)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền xóa bài nộp này.";
+                return RedirectToAction("Index", new { assignmentId });
+            }
+
+            // Xóa file nếu có
+            if (!string.IsNullOrEmpty(submission.FilePath))
+            {
+                var filePath = Path.Combine(_env.WebRootPath, submission.FilePath.TrimStart('/'));
+                if (System.IO.File.Exists(filePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deleting file: {FilePath}", filePath);
+                    }
+                }
+            }
+
+            _context.Submissions.Remove(submission);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = "Đã xóa bài nộp thành công.";
+
+            // Nếu là học viên, redirect về trang chi tiết bài tập
+            if (!isInstructor)
+            {
+                return RedirectToAction("Details", "Assignments", new { id = assignmentId });
+            }
+
+            return RedirectToAction("Index", new { assignmentId });
+        }
     }
 }

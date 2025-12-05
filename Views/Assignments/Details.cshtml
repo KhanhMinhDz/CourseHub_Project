@@ -53,24 +53,62 @@
     </div>
 }
 
-<ul class="nav nav-tabs" id="assignmentTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button"
-            role="tab">Chỉnh sửa</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="subs-tab" data-bs-toggle="tab" data-bs-target="#subs" type="button" role="tab">Nộp
-            bài</button>
-    </li>
-</ul>
-<div class="tab-content p-3 border border-top-0">
-    <div class="tab-pane fade show active" id="edit" role="tabpanel">
-        @if (!canEdit)
-        {
-            <div class="alert alert-info">Bạn không có quyền chỉnh sửa bài tập này.</div>
-        }
-        else
-        {
+@* Hiển thị nội dung bài tập cho học viên *@
+@if (!canEdit)
+{
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Nội dung bài tập</h5>
+        </div>
+        <div class="card-body">
+            <h4>@Model.Title</h4>
+
+            @if (Model.DueDate.HasValue)
+            {
+                var isPastDue = Model.DueDate.Value < DateTime.Now;
+                <div class="alert @(isPastDue ? "alert-danger" : "alert-warning") mb-3">
+                    <i class="bi bi-clock me-1"></i>
+                    <strong>Hạn nộp bài:</strong>
+                    @Model.DueDate.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    @if (isPastDue)
+                    {
+                        <span class="badge bg-danger ms-2">ĐÃ QUÁ HẠN</span>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="assignment-content">
+                    @Html.Raw(Model.Description)
+                </div>
+            }
+            else
+            {
+                <p class="text-muted fst-italic">Chưa có nội dung</p>
+            }
+        </div>
+    </div>
+}
+else
+{
+    @* Tabs cho giảng viên/admin *@
+    <ul class="nav nav-tabs" id="assignmentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button"
+                role="tab">Chỉnh sửa</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="subs-tab" data-bs-toggle="tab" data-bs-target="#subs" type="button" role="tab">Nộp
+                bài</button>
+        </li>
+    </ul>
+}
+
+@if (canEdit)
+{
+    <div class="tab-content p-3 border border-top-0">
+        <div class="tab-pane fade show active" id="edit" role="tabpanel">
             <form asp-action="EditDescription" method="post" id="editAssignmentForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.Id" />
@@ -135,138 +173,150 @@
                     <i class="bi bi-trash"></i> Xóa bài tập
                 </button>
             </form>
-        }
-        @{
-            var questions = new List<CourseManagement.Models.Question>();
 
-            if (db != null)
-            {
-                var tmp = db.Questions
-                .Where(q => q.AssignmentId == Model.Id)
-                .ToList();
+            @{
+                var questions = new List<CourseManagement.Models.Question>();
 
-                if (tmp != null)
-                    questions = tmp;
+                if (db != null)
+                {
+                    var tmp = db.Questions
+                    .Where(q => q.AssignmentId == Model.Id)
+                    .ToList();
+
+                    if (tmp != null)
+                        questions = tmp;
+                }
             }
-        }
 
-    </div>
-    <div class="tab-pane fade" id="subs" role="tabpanel">
-        <h4>Danh sách sinh viên và trạng thái nộp</h4>
+        </div>
+        <div class="tab-pane fade" id="subs" role="tabpanel">
+            <h4>Danh sách sinh viên và trạng thái nộp</h4>
 
-        @if (canEdit)
-        {
             <a asp-action="DownloadAllSubmissions" asp-route-id="@Model.Id" class="btn btn-secondary mb-2">Tải tất cả bài
                 nộp (.zip)</a>
-        }
 
-        @{
-            // Kiểm tra xem bài tập có câu hỏi không (trắc nghiệm = true, tự luận = false)
-            var isQuizAssignment = questions.Any();
-        }
+            @{
+                // Kiểm tra xem bài tập có câu hỏi không (trắc nghiệm = true, tự luận = false)
+                var isQuizAssignment = questions.Any();
+            }
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Họ tên</th>
-                    <th>Trạng thái</th>
-                    @if (isQuizAssignment)
-                    {
-                        <th>Điểm</th>
-                    }
-                    else
-                    {
-                        <th>Tệp nộp</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    var enrollments = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
-                    as CourseManagement.Data.ApplicationDbContext;
-                    var userMgr =
-                    Context.RequestServices.GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>))
-                    as Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>;
-                    var list = enrollments?.Enrollments.Where(e => e.ClassRoomId == Model.ClassRoomId).ToList() ?? new
-                    List<CourseManagement.Models.Enrollment>();
-                    foreach (var e in list)
-                    {
-                        var user = userMgr?.FindByIdAsync(e.StudentId).GetAwaiter().GetResult();
-                        var sub = enrollments?.Submissions.FirstOrDefault(s => s.AssignmentId == Model.Id && s.StudentId ==
-                        e.StudentId);
-                        var submitted = sub != null;
-                        <tr class="@(submitted ? "table-success" : "table-danger")">
-                            <td>@(user?.FullName ?? user?.UserName)</td>
-                            <td>@(submitted ? "Đã nộp" : "Chưa nộp")</td>
-                            <td>
-                                @if (isQuizAssignment)
-                                {
-                                    @* Hiển thị điểm cho bài trắc nghiệm *@
-                                    if (submitted && sub?.Score.HasValue == true)
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Họ tên</th>
+                        <th>Trạng thái</th>
+                        @if (isQuizAssignment)
+                        {
+                            <th>Điểm</th>
+                        }
+                        else
+                        {
+                            <th>Tệp nộp</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var enrollments = Context.RequestServices.GetService(typeof(CourseManagement.Data.ApplicationDbContext))
+                        as CourseManagement.Data.ApplicationDbContext;
+                        var userMgr =
+                        Context.RequestServices.GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>))
+                        as Microsoft.AspNetCore.Identity.UserManager<CourseManagement.Data.ApplicationUser>;
+                        var list = enrollments?.Enrollments.Where(e => e.ClassRoomId == Model.ClassRoomId).ToList() ?? new
+                        List<CourseManagement.Models.Enrollment>();
+                        foreach (var e in list)
+                        {
+                            var user = userMgr?.FindByIdAsync(e.StudentId).GetAwaiter().GetResult();
+                            var sub = enrollments?.Submissions.FirstOrDefault(s => s.AssignmentId == Model.Id && s.StudentId ==
+                            e.StudentId);
+                            var submitted = sub != null;
+                            <tr class="@(submitted ? "table-success" : "table-danger")">
+                                <td>@(user?.FullName ?? user?.UserName)</td>
+                                <td>@(submitted ? "Đã nộp" : "Chưa nộp")</td>
+                                <td>
+                                    @if (isQuizAssignment)
                                     {
-                                        var score = sub.Score.Value;
-                                        var badgeClass = score >= 8 ? "bg-success" : (score >= 5 ? "bg-warning" : "bg-danger");
-                                        <span class="badge @badgeClass fs-6">@score.ToString("F2")/10</span>
-                                    }
-                                    else if (submitted)
-                                    {
-                                        // Fallback: Parse từ Comments nếu Score null (dữ liệu cũ)
-                                        var scoreText = "-";
-                                        if (!string.IsNullOrEmpty(sub?.Comments) && sub.Comments.Contains("Điểm:"))
+                                        @* Hiển thị điểm cho bài trắc nghiệm *@
+                                        if (submitted && sub?.Score.HasValue == true)
                                         {
-                                            var parts = sub.Comments.Split('-');
-                                            if (parts.Length > 0)
-                                            {
-                                                scoreText = parts[0].Replace("Điểm:", "").Trim();
-                                            }
+                                            var score = sub.Score.Value;
+                                            var badgeClass = score >= 8 ? "bg-success" : (score >= 5 ? "bg-warning" : "bg-danger");
+                                            <span class="badge @badgeClass fs-6">@score.ToString("F2")/10</span>
                                         }
-                                        <span class="badge bg-info fs-6">@scoreText</span>
+                                        else if (submitted)
+                                        {
+                                            // Fallback: Parse từ Comments nếu Score null (dữ liệu cũ)
+                                            var scoreText = "-";
+                                            if (!string.IsNullOrEmpty(sub?.Comments) && sub.Comments.Contains("Điểm:"))
+                                            {
+                                                var parts = sub.Comments.Split('-');
+                                                if (parts.Length > 0)
+                                                {
+                                                    scoreText = parts[0].Replace("Điểm:", "").Trim();
+                                                }
+                                            }
+                                            <span class="badge bg-info fs-6">@scoreText</span>
+                                        }
+                                        else
+                                        {
+                                            <text>-</text>
+                                        }
                                     }
                                     else
                                     {
-                                        <text>-</text>
+                                        @* Hiển thị link tải file cho bài tự luận *@
+                                        if (submitted && !string.IsNullOrEmpty(sub?.FilePath))
+                                        {
+                                            // Link trực tiếp tới file trong wwwroot (FilePath nên là /uploads/filename)
+                                            <a href="@sub.FilePath" download class="btn btn-sm btn-primary">
+                                                <i class="bi bi-download"></i> Tải
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <text>-</text>
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    @* Hiển thị link tải file cho bài tự luận *@
-                                    if (submitted && !string.IsNullOrEmpty(sub?.FilePath))
-                                    {
-                                        // Link trực tiếp tới file trong wwwroot (FilePath nên là /uploads/filename)
-                                        <a href="@sub.FilePath" download class="btn btn-sm btn-primary">
-                                            <i class="bi bi-download"></i> Tải
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <text>-</text>
-                                    }
-                                }
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
+                        }
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+}
 
 @section Scripts {
-    <script>
-        // Initialize CKEditor for description
-        var descriptionEditor = CKEDITOR.replace('descriptionEditor', {
-            filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
-            filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
-            filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
-            filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
-            height: 300
-        });
+    @if (canEdit)
+    {
+        <script>
+            // Initialize CKEditor for description
+            var descriptionEditor = CKEDITOR.replace('descriptionEditor', {
+                filebrowserBrowseUrl: '/ckfinder/ckfinder/ckfinder.html',
+                filebrowserImageBrowseUrl: '/ckfinder/ckfinder/ckfinder.html?type=Images',
+                filebrowserUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Files',
+                filebrowserImageUploadUrl: '/ckfinder/ckfinder/core/connector/aspx/connector.aspx?command=QuickUpload&type=Images',
+                height: 300
+            });
 
-        // Update textarea before form submit
-        document.getElementById('editAssignmentForm')?.addEventListener('submit', function (e) {
-            for (var instance in CKEDITOR.instances) {
-                CKEDITOR.instances[instance].updateElement();
-            }
-        });
-    </script>
+            // Update textarea before form submit
+            document.getElementById('editAssignmentForm')?.addEventListener('submit', function (e) {
+                for (var instance in CKEDITOR.instances) {
+                    CKEDITOR.instances[instance].updateElement();
+                }
+            });
+        </script>
+    }
 }
+
+<style>
+    .assignment-content {
+        padding: 1rem 0;
+        line-height: 1.8;
+    }
+
+    .assignment-content p {
+        margin-bottom: 1rem;
+    }
+</style>

@@ -20,6 +20,10 @@ namespace CourseManagement.Models
 
         public bool IsActive { get; set; } = true; // Còn mở hay đã đóng
 
+        [Required]
+        [StringLength(50)]
+        public string Password { get; set; } = string.Empty; // Mật khẩu điểm danh
+
         public ICollection<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
     }
 }

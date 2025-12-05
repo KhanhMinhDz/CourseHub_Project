@@ -2,7 +2,7 @@
 
 @{
     Layout = "~/Views/Shared/_InstructorLayout.cshtml";
-    ViewData["Title"] = "Báo cáo & Thống kê";
+    ViewData["Title"] = "Chấm điểm";
     var sessions = ViewBag.AttendanceSessions as List<CourseManagement.Models.AttendanceSession> ?? new
     List<CourseManagement.Models.AttendanceSession>();
 }
@@ -12,7 +12,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="mb-0">
-                <i class="bi bi-bar-chart-fill me-2"></i>Báo cáo & Thống kê
+                <i class="bi bi-pencil-square me-2"></i>Chấm điểm
             </h1>
             @if (ViewBag.ClassName != null)
             {
@@ -29,13 +29,13 @@
                 </a>
                 <a href="@Url.Action("ExportToExcel", "Instructor", new { classRoomId = ViewBag.ClassRoomId })"
                     class="btn btn-success me-2">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
                 </a>
             }
             else
             {
                 <a href="@Url.Action("ExportToExcel", "Instructor")" class="btn btn-success me-2">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
                 </a>
             }
             <button id="editModeBtn" class="btn btn-warning">

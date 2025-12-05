@@ -26,25 +26,35 @@
                         <p class="card-text text-muted">
                             <small>@cls.Description</small>
                         </p>
-                        
+
                         <div class="mb-3">
                             <label class="form-label">
                                 <i class="bi bi-clock me-1"></i>Thời gian mở (phút):
                             </label>
-                            <input type="number" 
-                                   class="form-control duration-input" 
-                                   id="duration-@cls.Id" 
-                                   value="15" 
-                                   min="1" 
-                                   max="120">
+                            <input type="number" class="form-control duration-input" id="duration-@cls.Id" value="15" min="1"
+                                max="120">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-key me-1"></i>Mật khẩu điểm danh:
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="password-@cls.Id" value="" maxlength="50"
+                                    placeholder="Nhập hoặc tạo tự động">
+                                <button class="btn btn-outline-secondary" type="button" onclick="generatePassword(@cls.Id)">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Tạo ngẫu nhiên
+                                </button>
+                            </div>
+                            <small class="text-muted">Mật khẩu học viên cần nhập để điểm danh</small>
                         </div>
 
                         <div class="d-grid gap-2">
                             <button class="btn btn-success" onclick="openAttendance(@cls.Id)">
                                 <i class="bi bi-check-circle me-1"></i>Mở điểm danh
                             </button>
-                            <a href="@Url.Action("AttendanceSessions", new { classRoomId = cls.Id })" 
-                               class="btn btn-outline-primary">
+                            <a href="@Url.Action("AttendanceSessions", new { classRoomId = cls.Id })"
+                                class="btn btn-outline-primary">
                                 <i class="bi bi-list-ul me-1"></i>Xem lịch sử
                             </a>
                         </div>
@@ -66,16 +76,41 @@
 
 @section Scripts {
     <script>
+        // Hàm tạo mật khẩu ngẫu nhiên 6 ký tự
+        function generatePassword(classId) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let password = '';
+            for (let i = 0; i < 6; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById(`password-${classId}`).value = password;
+        }
+
+        // Tự động tạo mật khẩu khi load trang cho mỗi lớp
+        document.addEventListener('DOMContentLoaded', function () {
+                @foreach (var cls in (List<CourseManagement.Models.ClassRoom>)ViewBag.Classes)
+                {
+                    <text>generatePassword(@cls.Id);</text>
+            }
+            });
+
         async function openAttendance(classId) {
             const durationInput = document.getElementById(`duration-${classId}`);
+            const passwordInput = document.getElementById(`password-${classId}`);
             const duration = parseInt(durationInput.value);
+            const password = passwordInput.value.trim();
 
             if (duration < 1 || duration > 120) {
                 alert('Thời gian phải từ 1-120 phút');
                 return;
             }
 
-            if (!confirm(`Mở điểm danh trong ${duration} phút?`)) {
+            if (!password) {
+                alert('Vui lòng nhập mật khẩu điểm danh');
+                return;
+            }
+
+            if (!confirm(`Mở điểm danh trong ${duration} phút với mật khẩu: ${password}?`)) {
                 return;
             }
 
@@ -85,13 +120,13 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `classRoomId=${classId}&durationMinutes=${duration}`
+                    body: `classRoomId=${classId}&durationMinutes=${duration}&password=${encodeURIComponent(password)}`
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    alert(`${result.message}\nĐóng lúc: ${result.closeAt}`);
+                    alert(`${result.message}\nMật khẩu: ${password}\nĐóng lúc: ${result.closeAt}`);
                     location.reload();
                 } else {
                     alert('Lỗi: ' + result.message);
@@ -111,7 +146,7 @@
 
     .card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
     }
 
     .duration-input {
