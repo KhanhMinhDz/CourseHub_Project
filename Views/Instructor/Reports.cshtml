@@ -21,30 +21,33 @@
                 </p>
             }
         </div>
-        <div>
-            @if (ViewBag.ClassRoomId != null)
-            {
-                <a asp-action="Edit" asp-route-id="@ViewBag.ClassRoomId" class="btn btn-outline-secondary me-2">
-                    <i class="bi bi-arrow-left me-1"></i>Quay lại lớp học
-                </a>
-                <a href="@Url.Action("ExportToExcel", "Instructor", new { classRoomId = ViewBag.ClassRoomId })"
-                    class="btn btn-success me-2">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
-                </a>
-            }
-            else
-            {
-                <a href="@Url.Action("ExportToExcel", "Instructor")" class="btn btn-success me-2">
-                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
-                </a>
-            }
-            <button id="editModeBtn" class="btn btn-warning">
-                <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
-            </button>
-            <button id="saveModeBtn" class="btn btn-success" style="display:none;">
-                <i class="bi bi-save me-1"></i>Lưu
-            </button>
-        </div>
+        @if (!User.IsInRole("Admin"))
+        {
+            <div>
+                @if (ViewBag.ClassRoomId != null)
+                {
+                    <a asp-action="Edit" asp-route-id="@ViewBag.ClassRoomId" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại lớp học
+                    </a>
+                    <a href="@Url.Action("ExportToExcel", "Instructor", new { classRoomId = ViewBag.ClassRoomId })"
+                        class="btn btn-success me-2">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
+                    </a>
+                }
+                else
+                {
+                    <a href="@Url.Action("ExportToExcel", "Instructor")" class="btn btn-success me-2">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo
+                    </a>
+                }
+                <button id="editModeBtn" class="btn btn-warning">
+                    <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
+                </button>
+                <button id="saveModeBtn" class="btn btn-success" style="display:none;">
+                    <i class="bi bi-save me-1"></i>Lưu
+                </button>
+            </div>
+        }
     </div>
 
     <p class="text-muted mb-0">

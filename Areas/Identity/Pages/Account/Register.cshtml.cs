@@ -49,68 +49,15 @@ namespace CourseManagement.Areas.Identity.Pages.Account
 
         public void OnGet(string? returnUrl = null)
         {
-            ReturnUrl = returnUrl ?? Url.Content("~/");
+            // Chuyển hướng về trang đăng nhập vì đăng ký đã bị vô hiệu hóa
+            Response.Redirect("/Identity/Account/Login");
         }
 
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
-            // Diagnostic logging: dump Request.Form keys and mask sensitive values
-            try
-            {
-                var keys = Request.Form.Keys.Cast<string>().ToArray();
-                _logger.LogInformation("Request.Form keys: {Keys}", string.Join(", ", keys));
-                foreach (var k in keys)
-                {
-                    var v = Request.Form[k];
-                    var display = (k?.IndexOf("password", System.StringComparison.OrdinalIgnoreCase) >= 0 || string.Equals(k, "__RequestVerificationToken"))
-                        ? "[MASKED]"
-                        : v.ToString();
-                    _logger.LogDebug("Form[{Key}] = {Value}", k, display);
-                }
-            }
-            catch (System.Exception ex)
-            {
-                _logger.LogError(ex, "Failed to read Request.Form");
-            }
-
-            returnUrl ??= Url.Content("~/");
-            if (!ModelState.IsValid)
-            {
-                // Log ModelState errors for diagnosis
-                foreach (var kv in ModelState)
-                {
-                    var key = kv.Key;
-                    foreach (var err in kv.Value.Errors)
-                    {
-                        _logger.LogWarning("ModelState[{Key}] error: {Error}", key, err.ErrorMessage);
-                    }
-                }
-                return Page();
-            }
-
-            if (string.IsNullOrEmpty(Input.Email) || string.IsNullOrEmpty(Input.Password) || string.IsNullOrEmpty(Input.FullName))
-            {
-                ModelState.AddModelError(string.Empty, "Email, full name and password are required.");
-                _logger.LogWarning("Registration attempt with missing required fields: Email={Email}, FullNameProvided={HasName}", Input?.Email, !string.IsNullOrEmpty(Input?.FullName));
-                return Page();
-            }
-
-            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, FullName = Input.FullName };
-            var result = await _userManager.CreateAsync(user, Input.Password);
-            if (result.Succeeded)
-            {
-                // assign role Student by default
-                await _userManager.AddToRoleAsync(user, "Student");
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                _logger.LogInformation("New user registered: {Email}", user.Email);
-                return LocalRedirect(returnUrl);
-            }
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-                _logger.LogWarning("Registration error for {Email}: {Error}", Input?.Email, error.Description);
-            }
-            return Page();
+            // Chuyển hướng về trang đăng nhập vì đăng ký đã bị vô hiệu hóa
+            await Task.CompletedTask;
+            return RedirectToPage("./Login");
         }
     }
 }

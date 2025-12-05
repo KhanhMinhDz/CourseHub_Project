@@ -24,7 +24,7 @@
                             <i class="bi bi-book me-2 text-primary"></i>@cls.Title
                         </h5>
                         <p class="card-text text-muted">
-                            <small>@cls.Description</small>
+                            <small>@Html.Raw(cls.Description)</small>
                         </p>
 
                         <div class="mb-3">
@@ -88,11 +88,11 @@
 
         // Tự động tạo mật khẩu khi load trang cho mỗi lớp
         document.addEventListener('DOMContentLoaded', function () {
-                @foreach (var cls in (List<CourseManagement.Models.ClassRoom>)ViewBag.Classes)
+                    @foreach (var cls in (List<CourseManagement.Models.ClassRoom>)ViewBag.Classes)
                 {
                     <text>generatePassword(@cls.Id);</text>
             }
-            });
+                });
 
         async function openAttendance(classId) {
             const durationInput = document.getElementById(`duration-${classId}`);

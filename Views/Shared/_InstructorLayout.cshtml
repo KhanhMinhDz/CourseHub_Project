@@ -45,7 +45,7 @@
                             <li class="nav-item">
                                 <a class="nav-link text-white px-3 py-2 rounded" asp-controller="Instructor"
                                     asp-action="Index">
-                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                    <i class="bi bi-speedometer2 me-1"></i>Quản lý
                                 </a>
                             </li>
                             <li class="nav-item dropdown">
@@ -77,12 +77,6 @@
                     {
                         <ul class="navbar-nav">
                             <li class="nav-item">
-                                <a class="nav-link text-white px-3 py-2 rounded" asp-area="Identity"
-                                    asp-page="/Account/Register">
-                                    <i class="bi bi-person-plus me-1"></i>Đăng ký
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="btn btn-light px-4 py-2 rounded-pill ms-2" asp-area="Identity"
                                     asp-page="/Account/Login">
                                     <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
@@ -99,7 +93,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Giảng viên</h5>
+                <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Quản lý Giảng viên</h5>
             </div>
             <nav class="sidebar-nav">
                 @{
@@ -126,10 +120,6 @@
                     class="sidebar-link @(isAttendancePage ? "active" : "")">
                     <i class="bi bi-calendar-check-fill me-2"></i>
                     <span>Điểm danh</span>
-                </a>
-                <a href="#" class="sidebar-link">
-                    <i class="bi bi-gear-fill me-2"></i>
-                    <span>Cài đặt</span>
                 </a>
             </nav>
         </aside>
