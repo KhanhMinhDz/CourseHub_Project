@@ -4,20 +4,175 @@
     ViewData["Title"] = "Danh sách lớp học";
 }
 
-<h1>Danh sách lớp học</h1>
-
-<ul>
-    @foreach (var c in Model)
-    {
-        <li>
-            <a asp-controller="Enrollments" asp-action="Access" asp-route-classId="@c.Id">
-                @c.Title
-            </a>
-            @if (!string.IsNullOrEmpty(c.Description))
-            {
-                <div>@c.Description</div>
-            }
-        </li>
+<style>
+    .class-list-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
     }
 
-</ul>
+    .page-header {
+        text-align: center;
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #007bff;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-weight: 700;
+    }
+
+    .page-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+
+    .classes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 25px;
+        list-style: none;
+        padding: 0;
+    }
+
+    .class-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+    }
+
+    .class-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .class-card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        color: white;
+    }
+
+    .class-card-header h3 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+
+    .class-card-header a {
+        color: white;
+        text-decoration: none;
+        display: block;
+    }
+
+    .class-card-header a:hover {
+        text-decoration: underline;
+    }
+
+    .class-card-body {
+        padding: 20px;
+    }
+
+    .class-description {
+        color: #555;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    .class-description::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .class-description::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .class-description::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+    .class-description::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .no-description {
+        color: #999;
+        font-style: italic;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+
+    @@media (max-width: 768px) {
+        .classes-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+<div class="class-list-container">
+    <div class="page-header">
+        <h1>📚 Danh sách lớp học</h1>
+        <p>Chọn lớp học để bắt đầu</p>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <ul class="classes-grid">
+            @foreach (var c in Model)
+            {
+                <li class="class-card">
+                    <div class="class-card-header">
+                        <h3>
+                            <a asp-controller="Enrollments" asp-action="Access" asp-route-classId="@c.Id">
+                                @c.Title
+                            </a>
+                        </h3>
+                    </div>
+                    <div class="class-card-body">
+                        @if (!string.IsNullOrEmpty(c.Description))
+                        {
+                            <div class="class-description">
+                                @Html.Raw(c.Description)
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="no-description">Chưa có mô tả</div>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="empty-state">
+            <div>📖</div>
+            <h3>Chưa có lớp học nào</h3>
+            <p>Hiện tại chưa có lớp học nào được tạo.</p>
+        </div>
+    }
+</div>

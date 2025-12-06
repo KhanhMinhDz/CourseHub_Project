@@ -31,11 +31,7 @@
                     }
                     else
                     {
-                        <a href="/Identity/Account/Register" class="btn btn-light btn-lg px-5 py-3 rounded-pill shadow-lg">
-                            <i class="bi bi-person-plus me-2"></i>Đăng ký ngay
-                        </a>
-                        <a href="/Identity/Account/Login"
-                            class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill border-2">
+                        <a href="/Identity/Account/Login" class="btn btn-light btn-lg px-5 py-3 rounded-pill shadow-lg">
                             <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập
                         </a>
                     }
@@ -181,10 +177,10 @@
                         <div class="card-body d-flex flex-column pt-2">
                             @if (!string.IsNullOrWhiteSpace(course.Description))
                             {
-                                <p class="card-text text-muted small flex-grow-1 mb-3"
+                                <div class="card-text text-muted small flex-grow-1 mb-3"
                                     style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6;">
-                                    @course.Description
-                                </p>
+                                    @Html.Raw(course.Description)
+                                </div>
                             }
                             else
                             {
