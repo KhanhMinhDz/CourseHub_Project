@@ -50,6 +50,41 @@
         </div>
     }
 
+    <!-- Edit Course Info Section -->
+    <div id="editCourseInfoSection" class="card border-0 bg-light mb-3">
+        <div class="card-body">
+            <h5 class="card-title">
+                <i class="bi bi-pencil-square me-2"></i>Chỉnh sửa thông tin khóa học
+            </h5>
+            <form asp-action="UpdateCourseInfo" method="post" class="row g-3">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+
+                <div class="col-12">
+                    <label class="form-label fw-bold">Tên khóa học <span class="text-danger">*</span></label>
+                    <input name="title" value="@Model.Title" class="form-control" placeholder="Nhập tên khóa học"
+                        required maxlength="200" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-bold">Mô tả khóa học</label>
+                    <textarea name="description" class="form-control" rows="4"
+                        placeholder="Nhập mô tả về khóa học">@Model.Description</textarea>
+                    <small class="text-muted">Bạn có thể sử dụng HTML để định dạng mô tả</small>
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-save me-1"></i>Lưu thay đổi
+                    </button>
+                    <button type="reset" class="btn btn-secondary ms-2">
+                        <i class="bi bi-x-circle me-1"></i>Hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Enrollment Password Form -->
     <div class="card border-0 bg-light">
         <div class="card-body">
@@ -297,6 +332,14 @@
             deleteBlock(id);
             return;
         }
+        var delInline = e.target.closest('button[data-action="delete-inline"]');
+        if (delInline) {
+            var id = delInline.getAttribute('data-id');
+            if (confirm('Bạn có chắc chắn muốn xóa nội dung này?')) {
+                deleteBlock(id);
+            }
+            return;
+        }
         var saveBtn = e.target.closest('button[data-action="save"]');
         if (saveBtn) {
             // handled by save logic below via event delegation
@@ -339,7 +382,7 @@
         el.style.display = 'none';
         var controls = block.querySelector('[data-controls]');
         if (controls) controls.style.display = 'block';
-        if (controls) controls.innerHTML = '<button class="btn btn-sm btn-primary" data-action="save" data-id="' + id + '">Lưu</button> <button class="btn btn-sm btn-secondary" data-action="cancel">Huỷ</button>';
+        if (controls) controls.innerHTML = '<button class="btn btn-sm btn-primary" data-action="save" data-id="' + id + '">Lưu</button> <button class="btn btn-sm btn-danger ms-2" data-action="delete-inline" data-id="' + id + '">Xóa</button> <button class="btn btn-sm btn-secondary ms-2" data-action="cancel">Huỷ</button>';
         block.insertBefore(ta, controls);
 
         // Initialize CKEditor for editing

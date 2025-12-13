@@ -60,7 +60,42 @@ namespace CourseManagement.Controllers
 
             _context.ClassRooms.Update(cls);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            TempData["Success"] = "Cập nhật mật khẩu ghi danh thành công!";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateCourseInfo(int id, string title, string? description)
+        {
+            var cls = await _context.ClassRooms.FindAsync(id);
+            if (cls == null)
+            {
+                TempData["Error"] = "Không tìm thấy khóa học!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var userId = _userManager.GetUserId(User);
+            if (cls.InstructorId != userId)
+            {
+                TempData["Error"] = "Bạn không có quyền chỉnh sửa khóa học này!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                TempData["Error"] = "Tên khóa học không được để trống!";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+
+            cls.Title = title.Trim();
+            cls.Description = description?.Trim();
+
+            _context.ClassRooms.Update(cls);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = "Cập nhật thông tin khóa học thành công!";
+            return RedirectToAction(nameof(Edit), new { id });
         }
 
         public async Task<IActionResult> Enrollments(int id)

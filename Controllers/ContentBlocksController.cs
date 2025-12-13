@@ -44,7 +44,6 @@ namespace CourseManagement.Controllers
             var userId = _userManager.GetUserId(User);
             if (cls != null && cls.InstructorId != null && cls.InstructorId != userId && !(User.IsInRole("Admin"))) return Forbid();
             cb.Content = content ?? string.Empty;
-            cb.UpdatedAt = DateTime.UtcNow;
             _context.ContentBlocks.Update(cb);
             await _context.SaveChangesAsync();
             return PartialView("_ContentBlock", cb);
